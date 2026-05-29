@@ -1,363 +1,174 @@
-/* ============================================================
-   GAME VISUALISER — style.css
-   Upgraded lightly for better retro feel
-   Old-PC friendly
-   ============================================================ */
+/* =========================================================
+   TERMINAL ARCADE
+   Ultra Lightweight CSS
+   ========================================================= */
 
-/* ---------- Reset ---------- */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-/* ---------- Body ---------- */
+html,
 body {
-  background: #181818;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
 
-  font-family: "Courier New", Courier, monospace;
-  color: #c8bfbe;
+    margin: 0;
+    padding: 0;
 
-  user-select: none;
-  overflow: hidden;
+    background: #000;
 
-  text-rendering: optimizeSpeed;
+    color: #aaa;
+
+    font-family: monospace;
+
+    image-rendering: pixelated;
+
 }
 
-/* ---------- App window ---------- */
-#app-window {
-  display: flex;
-  flex-direction: column;
+/* MAIN TERMINAL */
 
-  width: 636px;
+#terminal {
 
-  background: #2b2b2b;
+    width: 760px;
 
-  border: 3px solid #4a4a4a;
+    margin: 20px auto;
 
-  box-shadow:
-    3px 3px 0 #121212,
-    6px 6px 0 #0b0b0b;
+    border: 2px solid #444;
+
+    background: #050505;
+
 }
 
-/* ---------- Title bar ---------- */
-#title-bar {
-  position: relative;
+/* TOP BAR */
 
-  display: flex;
-  align-items: center;
+#topbar {
 
-  background: #3a3535;
+    padding: 10px;
 
-  border-bottom: 2px solid #555;
+    border-bottom: 2px solid #333;
 
-  padding: 4px 8px;
+    background: #111;
 
-  height: 26px;
+    font-size: 18px;
+
+    font-weight: bold;
+
 }
 
-#title-bar::after {
-  content: "";
+/* INTRO */
 
-  position: absolute;
-  left: 0;
-  bottom: 0;
+#intro {
 
-  width: 100%;
-  height: 1px;
+    padding: 12px;
 
-  background: #5c5555;
+    border-bottom: 1px solid #222;
 
-  opacity: 0.25;
 }
 
-#title-bar-dots {
-  display: flex;
-  gap: 5px;
+#intro p {
 
-  margin-right: 8px;
+    margin: 4px 0;
+
 }
 
-.dot {
-  width: 9px;
-  height: 9px;
+/* GAME GRID */
 
-  border-radius: 50%;
+#games {
 
-  background: #5a5050;
+    padding: 10px;
 
-  border: 1px solid #3a3a3a;
 }
 
-#title-text {
-  flex: 1;
+/* GAME CARD */
 
-  text-align: center;
+.game-card {
 
-  font-size: 11px;
+    display: flex;
 
-  letter-spacing: 3px;
+    align-items: center;
 
-  color: #b0a8a8;
+    gap: 12px;
 
-  text-transform: uppercase;
+    padding: 10px;
+
+    border: 1px solid #333;
+
+    background: #0b0b0b;
+
+    cursor: pointer;
+
+    margin-bottom: 10px;
+
 }
 
-#btn-arrow {
-  background: none;
+.game-card:hover {
 
-  border: 1px solid #555;
+    background: #111;
 
-  color: #888;
-
-  font-size: 10px;
-
-  width: 20px;
-  height: 16px;
-
-  cursor: pointer;
-
-  padding: 0;
-
-  line-height: 1;
 }
 
-#btn-arrow:hover {
-  background: #4a4444;
-  color: #bbb;
+/* IMAGE */
+
+.game-card img {
+
+    width: 160px;
+
+    height: 90px;
+
+    object-fit: cover;
+
+    border: 1px solid #444;
+
 }
 
-/* ---------- Score bar ---------- */
-#score-bar {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+/* GAME TEXT */
 
-  gap: 20px;
+.game-info h3 {
 
-  background: #262222;
+    margin: 0 0 6px 0;
 
-  border-bottom: 1px solid #3a3a3a;
+    color: #ddd;
 
-  padding: 4px 0;
+    font-size: 16px;
 
-  font-size: 12px;
-
-  letter-spacing: 2px;
-
-  color: #908888;
 }
 
-#score-bar span[id^="p-"],
-#score-bar span[id^="a-"] {
-  color: #c8bfbe;
-  font-weight: bold;
+.game-info p {
+
+    margin: 0;
+
+    color: #888;
+
+    font-size: 13px;
+
 }
 
-#score-divider {
-  color: #484040;
+/* GAME WINDOW */
+
+#game-window {
+
+    border-top: 2px solid #222;
+
+    padding: 10px;
+
 }
 
-/* ---------- Canvas wrap ---------- */
-#canvas-wrap {
-  position: relative;
+/* GAME HEADER */
 
-  border-left: 18px solid #333;
-  border-right: 18px solid #333;
+#game-header {
 
-  line-height: 0;
+    margin-bottom: 10px;
+
+    padding-bottom: 6px;
+
+    border-bottom: 1px solid #222;
+
 }
 
-#canvas-wrap::after {
-  content: "";
+/* CANVAS */
 
-  position: absolute;
-  inset: 0;
+canvas {
 
-  border: 1px solid rgba(255,255,255,0.03);
+    display: block;
 
-  pointer-events: none;
-}
+    background: #000;
 
-#pong {
-  display: block;
+    border: 2px solid #333;
 
-  width: 600px;
-  height: 360px;
+    image-rendering: pixelated;
 
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-
-  background: #111;
-
-  filter: contrast(1.02);
-}
-
-/* ---------- Overlay ---------- */
-#overlay {
-  position: absolute;
-  inset: 0;
-
-  background: rgba(10, 10, 10, 0.88);
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  display: none;
-}
-
-#overlay.active {
-  display: flex;
-}
-
-/* ---------- Menu panels ---------- */
-.menu {
-  display: none;
-
-  flex-direction: column;
-  align-items: center;
-
-  gap: 6px;
-}
-
-.menu.active {
-  display: flex;
-}
-
-.menu-title {
-  font-size: 22px;
-
-  letter-spacing: 4px;
-
-  color: #d0c8c8;
-
-  margin-bottom: 4px;
-
-  text-transform: uppercase;
-
-  text-shadow: 1px 1px 0 #111;
-}
-
-.menu-sub {
-  font-size: 10px;
-
-  letter-spacing: 3px;
-
-  color: #6a6060;
-
-  margin-bottom: 16px;
-}
-
-.menu-items {
-  display: flex;
-  flex-direction: column;
-
-  gap: 8px;
-
-  width: 200px;
-}
-
-.menu-hint {
-  margin-top: 20px;
-
-  font-size: 9px;
-
-  letter-spacing: 1px;
-
-  color: #4a4444;
-
-  text-align: center;
-}
-
-/* ---------- Signature ---------- */
-.menu-credit {
-  position: absolute;
-
-  right: 12px;
-  bottom: 10px;
-
-  font-size: 9px;
-
-  line-height: 1.4;
-
-  letter-spacing: 1px;
-
-  text-align: right;
-
-  color: #5f5858;
-
-  opacity: 0.75;
-
-  pointer-events: none;
-}
-
-/* ---------- Retro buttons ---------- */
-.retro-btn {
-  background: #3a3535;
-
-  border: 1px solid #5a5555;
-
-  color: #b0a8a8;
-
-  font-family: "Courier New", Courier, monospace;
-
-  font-size: 12px;
-
-  letter-spacing: 2px;
-
-  padding: 7px 14px;
-
-  cursor: pointer;
-
-  text-align: left;
-
-  width: 100%;
-
-  text-transform: uppercase;
-
-  outline: none;
-
-  transition:
-    background 0.05s linear,
-    border-color 0.05s linear;
-}
-
-.retro-btn:hover {
-  background: #464040;
-
-  border-color: #787070;
-
-  color: #d0c8c8;
-}
-
-.retro-btn:active {
-  background: #2e2a2a;
-}
-
-/* ---------- Status bar ---------- */
-#status-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  background: #222;
-
-  border-top: 1px solid #3a3a3a;
-
-  padding: 3px 10px;
-
-  font-size: 9px;
-
-  letter-spacing: 2px;
-
-  color: #585050;
-}
-
-#status-fps {
-  color: #484040;
 }
