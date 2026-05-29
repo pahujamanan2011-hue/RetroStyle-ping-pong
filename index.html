@@ -3,84 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Terminal Arcade</title>
-
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div id="terminal">
-
-    <!-- HEADER -->
-
     <div id="topbar">
         <span>TERMINAL ARCADE</span>
     </div>
-
-    <!-- TERMINAL TEXT -->
 
     <div id="intro">
         <p>> Lightweight Retro Linux Arcade</p>
         <p>> Select a game below</p>
     </div>
 
-    <!-- GAME GRID -->
-
     <div id="games">
-
-        <!-- GAME CARD -->
-
         <div class="game-card" onclick="loadGame('RetroBall.js')">
-
             <img src="RetroBall.png" alt="Retro Ball">
-
             <div class="game-info">
                 <h3>RETRO BALL</h3>
                 <p>Classic terminal pong.</p>
             </div>
-
         </div>
-
     </div>
-
-    <!-- GAME WINDOW -->
 
     <div id="game-window">
-
         <div id="game-header">
-            <span>RUNNING GAME</span>
+            <span id="game-title">RETRO BALL</span>
+            <button onclick="toggleFullscreen()" class="retro-btn">FULLSCREEN</button>
         </div>
-
         <canvas id="pong" width="640" height="360"></canvas>
-
     </div>
-
 </div>
 
 <script>
-
 function loadGame(file) {
-
-    /* remove previous script */
-
     const old = document.getElementById("game-script");
-
-    if (old)
-        old.remove();
-
-    /* load new game */
+    if (old) old.remove();
 
     const script = document.createElement("script");
-
     script.src = file;
-
     script.id = "game-script";
-
     document.body.appendChild(script);
 }
 
+function toggleFullscreen() {
+    const elem = document.documentElement;
+    if (!document.fullscreenElement) {
+        elem.requestFullscreen().catch(() => {});
+    } else {
+        document.exitFullscreen();
+    }
+}
 </script>
-
 </body>
 </html>
