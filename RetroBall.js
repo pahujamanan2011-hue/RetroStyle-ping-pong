@@ -64,8 +64,8 @@ var cpuY    = (H >> 1) - (PADDLE_H >> 1);
 
 var ballX = W >> 1;
 var ballY = H >> 1;
-var ballVX = 4;
-var ballVY = 2;
+var ballVX = 6;
+var ballVY = 3;
 
 /* ---------------------------------------------------------
    INPUT  – prevent default on arrow keys to stop page scroll
