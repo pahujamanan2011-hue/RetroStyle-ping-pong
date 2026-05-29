@@ -1,0 +1,204 @@
+/* ============================================================
+   GAME VISUALISER — style.css
+   Retro dark-gray utility aesthetic, no animations, no glow
+   ============================================================ */
+
+/* ---------- Reset ---------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ---------- Body ---------- */
+body {
+  background: #1a1a1a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: "Courier New", Courier, monospace;
+  color: #c8bfbe;
+  user-select: none;
+}
+
+/* ---------- App window ---------- */
+#app-window {
+  display: flex;
+  flex-direction: column;
+  width: 636px;           /* canvas 600 + 2×18 border */
+  background: #2b2b2b;
+  border: 3px solid #444;
+  box-shadow: 4px 4px 0 #111, 8px 8px 0 #0d0d0d;
+}
+
+/* ---------- Title bar ---------- */
+#title-bar {
+  display: flex;
+  align-items: center;
+  background: #3a3535;
+  border-bottom: 2px solid #555;
+  padding: 4px 8px;
+  height: 26px;
+}
+
+#title-bar-dots {
+  display: flex;
+  gap: 5px;
+  margin-right: 8px;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #5a5050;
+  border: 1px solid #3a3a3a;
+}
+
+#title-text {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #b0a8a8;
+  text-transform: uppercase;
+}
+
+#btn-arrow {
+  background: none;
+  border: 1px solid #555;
+  color: #888;
+  font-size: 10px;
+  width: 20px;
+  height: 16px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+#btn-arrow:hover { background: #4a4444; color: #bbb; }
+
+/* ---------- Score bar ---------- */
+#score-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  background: #262222;
+  border-bottom: 1px solid #3a3a3a;
+  padding: 4px 0;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #908888;
+}
+
+#score-bar span[id^="p-"], #score-bar span[id^="a-"] { color: #c8bfbe; font-weight: bold; }
+#score-divider { color: #484040; }
+
+/* ---------- Canvas wrap ---------- */
+#canvas-wrap {
+  position: relative;
+  border-left: 18px solid #333;
+  border-right: 18px solid #333;
+  line-height: 0;
+}
+
+#pong {
+  display: block;
+  width: 600px;
+  height: 360px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #111;
+}
+
+/* ---------- Overlay ---------- */
+#overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.88);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  display: none;         /* hidden by default; JS adds .active */
+}
+
+#overlay.active { display: flex; }
+
+/* ---------- Menu panels ---------- */
+.menu {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.menu.active { display: flex; }
+
+.menu-title {
+  font-size: 22px;
+  letter-spacing: 6px;
+  color: #d0c8c8;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.menu-sub {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: #6a6060;
+  margin-bottom: 16px;
+}
+
+.menu-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 200px;
+}
+
+.menu-hint {
+  margin-top: 20px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #4a4444;
+  text-align: center;
+}
+
+/* ---------- Retro buttons ---------- */
+.retro-btn {
+  background: #3a3535;
+  border: 1px solid #5a5555;
+  color: #b0a8a8;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  padding: 7px 14px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  text-transform: uppercase;
+  outline: none;
+}
+
+.retro-btn:hover {
+  background: #464040;
+  border-color: #787070;
+  color: #d0c8c8;
+}
+
+.retro-btn:active {
+  background: #2e2a2a;
+}
+
+/* ---------- Status bar ---------- */
+#status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #222;
+  border-top: 1px solid #3a3a3a;
+  padding: 3px 10px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #585050;
+}
+
+#status-fps { color: #484040; }
