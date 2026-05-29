@@ -1,174 +1,112 @@
 /* =========================================================
-   TERMINAL ARCADE
-   Ultra Lightweight CSS
+   TERMINAL ARCADE – Ultra Lightweight CSS
    ========================================================= */
 
-html,
-body {
-
+html, body {
     margin: 0;
     padding: 0;
-
     background: #000;
-
     color: #aaa;
-
     font-family: monospace;
-
     image-rendering: pixelated;
-
 }
 
 /* MAIN TERMINAL */
-
 #terminal {
-
-    width: 760px;
-
+    width: 700px;
     margin: 20px auto;
-
-    border: 2px solid #444;
-
+    border: 2px solid #333;
     background: #050505;
-
 }
 
 /* TOP BAR */
-
 #topbar {
-
-    padding: 10px;
-
-    border-bottom: 2px solid #333;
-
-    background: #111;
-
-    font-size: 18px;
-
+    padding: 10px 14px;
+    border-bottom: 2px solid #222;
+    background: #0d0d0d;
+    font-size: 17px;
     font-weight: bold;
-
+    color: #ccc;
 }
 
 /* INTRO */
-
 #intro {
-
-    padding: 12px;
-
-    border-bottom: 1px solid #222;
-
+    padding: 10px 14px;
+    border-bottom: 1px solid #1a1a1a;
+    color: #555;
+    font-size: 13px;
 }
-
-#intro p {
-
-    margin: 4px 0;
-
-}
+#intro p { margin: 3px 0; }
 
 /* GAME GRID */
-
-#games {
-
-    padding: 10px;
-
-}
+#games { padding: 10px; }
 
 /* GAME CARD */
-
 .game-card {
-
     display: flex;
-
     align-items: center;
-
-    gap: 12px;
-
+    gap: 14px;
     padding: 10px;
-
-    border: 1px solid #333;
-
-    background: #0b0b0b;
-
+    border: 1px solid #2a2a2a;
+    background: #080808;
     cursor: pointer;
-
     margin-bottom: 10px;
-
 }
-
-.game-card:hover {
-
-    background: #111;
-
-}
+.game-card:hover { background: #111; border-color: #444; }
 
 /* IMAGE */
-
 .game-card img {
-
     width: 160px;
-
     height: 90px;
-
     object-fit: cover;
-
-    border: 1px solid #444;
-
+    border: 1px solid #333;
+    image-rendering: pixelated;
 }
 
 /* GAME TEXT */
+.game-info h3 { margin: 0 0 5px 0; color: #ddd; font-size: 15px; }
+.game-info p  { margin: 0 0 3px 0; color: #777; font-size: 12px; }
+.game-info .hint { color: #444; font-size: 11px; }
 
-.game-info h3 {
-
-    margin: 0 0 6px 0;
-
-    color: #ddd;
-
-    font-size: 16px;
-
+/* STATUS BAR */
+#statusbar {
+    padding: 6px 14px;
+    border-top: 1px solid #1a1a1a;
+    font-size: 11px;
+    color: #444;
 }
 
-.game-info p {
-
-    margin: 0;
-
-    color: #888;
-
-    font-size: 13px;
-
+/* FULLSCREEN OVERLAY */
+#overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
 }
 
-/* GAME WINDOW */
-
-#game-window {
-
-    border-top: 2px solid #222;
-
-    padding: 10px;
-
+#overlay canvas {
+    display: block;
+    border: 2px solid #2a2a2a;
+    image-rendering: pixelated;
+    /* Scale up on bigger screens without JS, keeps it crisp */
+    max-width: 100%;
+    max-height: calc(100vh - 40px);
+    width: auto;
+    height: auto;
 }
 
-/* GAME HEADER */
-
-#game-header {
-
-    margin-bottom: 10px;
-
-    padding-bottom: 6px;
-
-    border-bottom: 1px solid #222;
-
+#overlay-hint {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #333;
 }
-
-/* CANVAS */
 
 canvas {
-
-    display: block;
-
-    background: #000;
-
-    border: 2px solid #333;
-
     image-rendering: pixelated;
-
+    background: #000;
 }
