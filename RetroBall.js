@@ -1,7 +1,7 @@
 /* =========================================================
    RETROBALL.JS
-   ULTRA-LIGHT TERMINAL PONG
-   Optimized for VERY old Linux/Windows PCs
+   Optimized Terminal Pong
+   Lightweight + Better AI + Fixed Bugs
    ========================================================= */
 
 "use strict";
@@ -11,6 +11,7 @@
 --------------------------------------------------------- */
 
 const canvas = document.getElementById("pong");
+
 const ctx = canvas.getContext("2d", {
     alpha: false,
     desynchronized: true
@@ -19,14 +20,51 @@ const ctx = canvas.getContext("2d", {
 const W = canvas.width;
 const H = canvas.height;
 
-/* Disable smoothing completely */
 ctx.imageSmoothingEnabled = false;
 
 /* ---------------------------------------------------------
-   GAME STATE
+   SETTINGS
 --------------------------------------------------------- */
 
-let gameStarted = false;
+const WIN_SCORE = 10;
+
+/* Bigger objects */
+const BALL_SIZE = 8;
+
+const PADDLE_W = 6;
+const PADDLE_H = 70;
+
+/* Positions */
+const PLAYER_X = 14;
+const CPU_X = W - 20;
+
+/* Difficulty */
+const DIFFICULTY = [
+    {
+        name: "EASY",
+        speed: 2,
+        mistake: 0.12
+    },
+    {
+        name: "MEDIUM",
+        speed: 3,
+        mistake: 0.05
+    },
+    {
+        name: "HARD",
+        speed: 4,
+        mistake: 0.01
+    }
+];
+
+let difficulty = 1;
+
+/* ---------------------------------------------------------
+   STATE
+--------------------------------------------------------- */
+
+let started = false;
+let gameOver = false;
 
 /* ---------------------------------------------------------
    SCORES
@@ -36,17 +74,11 @@ let playerScore = 0;
 let cpuScore = 0;
 
 /* ---------------------------------------------------------
-   PADDLES
+   PLAYER
 --------------------------------------------------------- */
 
-const PW = 4;
-const PH = 40;
-
-const PLAYER_X = 8;
-const CPU_X = W - 12;
-
-let playerY = (H >> 1) - (PH >> 1);
-let cpuY = (H >> 1) - (PH >> 1);
+let playerY = (H >> 1) - (PADDLE_H >> 1);
+let cpuY = (H >> 1) - (PADDLE_H >> 1);
 
 /* ---------------------------------------------------------
    BALL
@@ -67,27 +99,43 @@ let down = 0;
 
 document.addEventListener("keydown", function(e) {
 
-    const c = e.code;
+    const k = e.code;
 
-    if (c === "ArrowUp" || c === "KeyW")
+    if (k === "ArrowUp" || k === "KeyW")
         up = 1;
 
-    else if (c === "ArrowDown" || c === "KeyS")
+    else if (k === "ArrowDown" || k === "KeyS")
         down = 1;
 
-    else if (c === "Enter")
-        gameStarted = true;
+    else if (k === "Enter") {
+
+        if (!started) {
+            started = true;
+        }
+
+        else if (gameOver) {
+            restartGame();
+        }
+    }
+
+    else if (k === "KeyD") {
+
+        difficulty++;
+
+        if (difficulty > 2)
+            difficulty = 0;
+    }
 
 });
 
 document.addEventListener("keyup", function(e) {
 
-    const c = e.code;
+    const k = e.code;
 
-    if (c === "ArrowUp" || c === "KeyW")
+    if (k === "ArrowUp" || k === "KeyW")
         up = 0;
 
-    else if (c === "ArrowDown" || c === "KeyS")
+    else if (k === "ArrowDown" || k === "KeyS")
         down = 0;
 
 });
@@ -110,12 +158,26 @@ function resetBall() {
 }
 
 /* ---------------------------------------------------------
+   RESTART
+--------------------------------------------------------- */
+
+function restartGame() {
+
+    playerScore = 0;
+    cpuScore = 0;
+
+    gameOver = false;
+
+    resetBall();
+}
+
+/* ---------------------------------------------------------
    UPDATE
 --------------------------------------------------------- */
 
 function update() {
 
-    if (!gameStarted)
+    if (!started || gameOver)
         return;
 
     /* PLAYER */
@@ -125,22 +187,33 @@ function update() {
     if (playerY < 0)
         playerY = 0;
 
-    else if (playerY > H - PH)
-        playerY = H - PH;
+    else if (playerY > H - PADDLE_H)
+        playerY = H - PADDLE_H;
 
-    /* SIMPLE CPU */
+    /* CPU AI */
 
-    if (cpuY + 18 < ballY)
-        cpuY += 3;
+    const ai = DIFFICULTY[difficulty];
 
-    else if (cpuY + 18 > ballY)
-        cpuY -= 3;
+    /*
+       Mistake system:
+       Sometimes AI intentionally reacts wrong
+       making it beatable.
+    */
+
+    if (Math.random() > ai.mistake) {
+
+        if (cpuY + (PADDLE_H >> 1) < ballY)
+            cpuY += ai.speed;
+
+        else if (cpuY + (PADDLE_H >> 1) > ballY)
+            cpuY -= ai.speed;
+    }
 
     if (cpuY < 0)
         cpuY = 0;
 
-    else if (cpuY > H - PH)
-        cpuY = H - PH;
+    else if (cpuY > H - PADDLE_H)
+        cpuY = H - PADDLE_H;
 
     /* BALL */
 
@@ -149,41 +222,91 @@ function update() {
 
     /* WALL */
 
-    if (ballY <= 0 || ballY >= H - 4)
-        ballVY = -ballVY;
+    if (ballY <= 0) {
 
-    /* PLAYER HIT */
+        ballY = 0;
+
+        ballVY = -ballVY;
+    }
+
+    else if (ballY >= H - BALL_SIZE) {
+
+        ballY = H - BALL_SIZE;
+
+        ballVY = -ballVY;
+    }
+
+    /* PLAYER COLLISION */
 
     if (
-        ballX <= PLAYER_X + PW &&
-        ballY + 4 >= playerY &&
-        ballY <= playerY + PH
+        ballVX < 0 &&
+
+        ballX <= PLAYER_X + PADDLE_W &&
+        ballX >= PLAYER_X &&
+
+        ballY + BALL_SIZE >= playerY &&
+        ballY <= playerY + PADDLE_H
     ) {
+
+        ballX = PLAYER_X + PADDLE_W;
+
         ballVX = 4;
+
+        /*
+           Add angle depending on hit position
+        */
+
+        ballVY = (
+            (ballY - (playerY + (PADDLE_H >> 1)))
+            / 10
+        ) | 0;
     }
 
-    /* CPU HIT */
+    /* CPU COLLISION */
 
     else if (
-        ballX + 4 >= CPU_X &&
-        ballY + 4 >= cpuY &&
-        ballY <= cpuY + PH
+        ballVX > 0 &&
+
+        ballX + BALL_SIZE >= CPU_X &&
+        ballX <= CPU_X + PADDLE_W &&
+
+        ballY + BALL_SIZE >= cpuY &&
+        ballY <= cpuY + PADDLE_H
     ) {
+
+        ballX = CPU_X - BALL_SIZE;
+
         ballVX = -4;
+
+        ballVY = (
+            (ballY - (cpuY + (PADDLE_H >> 1)))
+            / 10
+        ) | 0;
     }
 
-    /* SCORE */
+    /* SCORE FIX */
 
-    if (ballX < 0) {
+    /*
+       Score immediately when ball crosses edge.
+       No late paddle save bug anymore.
+    */
+
+    if (ballX < -BALL_SIZE) {
 
         cpuScore++;
+
+        if (cpuScore >= WIN_SCORE)
+            gameOver = true;
 
         resetBall();
     }
 
-    else if (ballX > W) {
+    else if (ballX > W + BALL_SIZE) {
 
         playerScore++;
+
+        if (playerScore >= WIN_SCORE)
+            gameOver = true;
 
         resetBall();
     }
@@ -195,30 +318,58 @@ function update() {
 
 function draw() {
 
-    /* CLEAR SCREEN */
+    /* CLEAR */
 
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, W, H);
-
-    /* MAIN COLOR */
 
     ctx.fillStyle = "#AAA";
 
     /* START SCREEN */
 
-    if (!gameStarted) {
+    if (!started) {
 
         ctx.font = "14px monospace";
 
-        ctx.fillText("TERMINAL ARCADE", 220, 120);
+        ctx.fillText("TERMINAL ARCADE", 210, 110);
 
-        ctx.fillText("RETRO BALL", 250, 150);
+        ctx.fillText("RETRO BALL", 240, 145);
 
-        ctx.fillText("PRESS ENTER TO START", 190, 210);
+        ctx.fillText("ENTER = START", 225, 190);
 
-        ctx.fillText("W/S OR ARROW KEYS", 200, 240);
+        ctx.fillText("D = CHANGE DIFFICULTY", 170, 220);
+
+        ctx.fillText(
+            "MODE: " + DIFFICULTY[difficulty].name,
+            215,
+            260
+        );
 
         return;
+    }
+
+    /* GAME OVER */
+
+    if (gameOver) {
+
+        ctx.font = "16px monospace";
+
+        if (playerScore > cpuScore)
+            ctx.fillText("YOU WIN", 250, 140);
+        else
+            ctx.fillText("CPU WINS", 245, 140);
+
+        ctx.fillText(
+            playerScore + " - " + cpuScore,
+            270,
+            180
+        );
+
+        ctx.fillText(
+            "PRESS ENTER",
+            225,
+            240
+        );
     }
 
     /* CENTER LINE */
@@ -227,9 +378,9 @@ function draw() {
 
     while (y < H) {
 
-        ctx.fillRect((W >> 1) - 1, y, 2, 8);
+        ctx.fillRect((W >> 1) - 1, y, 2, 10);
 
-        y += 16;
+        y += 18;
     }
 
     /* PLAYER */
@@ -237,8 +388,8 @@ function draw() {
     ctx.fillRect(
         PLAYER_X,
         playerY | 0,
-        PW,
-        PH
+        PADDLE_W,
+        PADDLE_H
     );
 
     /* CPU */
@@ -246,8 +397,8 @@ function draw() {
     ctx.fillRect(
         CPU_X,
         cpuY | 0,
-        PW,
-        PH
+        PADDLE_W,
+        PADDLE_H
     );
 
     /* BALL */
@@ -255,17 +406,27 @@ function draw() {
     ctx.fillRect(
         ballX | 0,
         ballY | 0,
-        4,
-        4
+        BALL_SIZE,
+        BALL_SIZE
     );
 
     /* SCORE */
 
-    ctx.font = "14px monospace";
+    ctx.font = "16px monospace";
 
-    ctx.fillText(playerScore, 120, 20);
+    ctx.fillText(playerScore, 140, 25);
 
-    ctx.fillText(cpuScore, W - 120, 20);
+    ctx.fillText(cpuScore, W - 150, 25);
+
+    /* MODE */
+
+    ctx.font = "11px monospace";
+
+    ctx.fillText(
+        DIFFICULTY[difficulty].name,
+        (W >> 1) - 25,
+        20
+    );
 }
 
 /* ---------------------------------------------------------
@@ -273,8 +434,8 @@ function draw() {
 --------------------------------------------------------- */
 
 /*
-   30 FPS FIXED LOOP
-   MUCH LIGHTER than requestAnimationFrame
+   Fixed 30 FPS
+   Lighter than requestAnimationFrame
 */
 
 setInterval(function() {
