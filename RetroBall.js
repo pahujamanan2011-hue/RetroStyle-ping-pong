@@ -1,24 +1,24 @@
 /* =========================================================
-   RETROBALL.JS
-   Optimized Terminal Pong
-   Lightweight + Better AI + Fixed Bugs
+   RETROBALL.JS  v2
+   Terminal Pong – Fixed & Improved
+   - Arrow keys no longer scroll the page
+   - Ball vibration / shake fixed
+   - Fullscreen mode (F key or button)
+   - P = Pause, Escape = exit fullscreen
+   - Start menu with Help screen & difficulty picker
    ========================================================= */
 
 "use strict";
 
 /* ---------------------------------------------------------
-   CANVAS
+   CANVAS  (created dynamically so the page stays clean)
 --------------------------------------------------------- */
 
-const canvas = document.getElementById("pong");
+var canvas = document.getElementById("pong");
+var ctx    = canvas.getContext("2d", { alpha: false });
 
-const ctx = canvas.getContext("2d", {
-    alpha: false,
-    desynchronized: true
-});
-
-const W = canvas.width;
-const H = canvas.height;
+var W = canvas.width;   /* 640 */
+var H = canvas.height;  /* 360 */
 
 ctx.imageSmoothingEnabled = false;
 
@@ -26,148 +26,213 @@ ctx.imageSmoothingEnabled = false;
    SETTINGS
 --------------------------------------------------------- */
 
-const WIN_SCORE = 10;
+var WIN_SCORE  = 10;
+var BALL_SIZE  = 8;
+var PADDLE_W   = 6;
+var PADDLE_H   = 70;
+var PLAYER_X   = 14;
+var CPU_X      = W - 20;
 
-/* Bigger objects */
-const BALL_SIZE = 8;
-
-const PADDLE_W = 6;
-const PADDLE_H = 70;
-
-/* Positions */
-const PLAYER_X = 14;
-const CPU_X = W - 20;
-
-/* Difficulty */
-const DIFFICULTY = [
-    {
-        name: "EASY",
-        speed: 2,
-        mistake: 0.12
-    },
-    {
-        name: "MEDIUM",
-        speed: 3,
-        mistake: 0.05
-    },
-    {
-        name: "HARD",
-        speed: 4,
-        mistake: 0.01
-    }
+var DIFFICULTY = [
+    { name: "EASY",   speed: 2, mistake: 0.12 },
+    { name: "MEDIUM", speed: 3, mistake: 0.05 },
+    { name: "HARD",   speed: 4, mistake: 0.01 }
 ];
-
-let difficulty = 1;
 
 /* ---------------------------------------------------------
    STATE
 --------------------------------------------------------- */
 
-let started = false;
-let gameOver = false;
+var SCREEN_MENU = 0;
+var SCREEN_HELP = 1;
+var SCREEN_PLAY = 2;
+
+var screen     = SCREEN_MENU;
+var difficulty = 1;   /* default MEDIUM */
+var paused     = false;
+var gameOver   = false;
 
 /* ---------------------------------------------------------
-   SCORES
+   SCORES / POSITIONS
 --------------------------------------------------------- */
 
-let playerScore = 0;
-let cpuScore = 0;
+var playerScore = 0;
+var cpuScore    = 0;
+
+var playerY = (H >> 1) - (PADDLE_H >> 1);
+var cpuY    = (H >> 1) - (PADDLE_H >> 1);
+
+var ballX = W >> 1;
+var ballY = H >> 1;
+var ballVX = 4;
+var ballVY = 2;
 
 /* ---------------------------------------------------------
-   PLAYER
+   INPUT  – prevent default on arrow keys to stop page scroll
 --------------------------------------------------------- */
 
-let playerY = (H >> 1) - (PADDLE_H >> 1);
-let cpuY = (H >> 1) - (PADDLE_H >> 1);
+var up   = 0;
+var down = 0;
 
-/* ---------------------------------------------------------
-   BALL
---------------------------------------------------------- */
+document.addEventListener("keydown", function (e) {
 
-let ballX = W >> 1;
-let ballY = H >> 1;
+    var k = e.code;
 
-let ballVX = 4;
-let ballVY = 2;
+    /* Stop arrow keys / space from scrolling the page */
+    if (k === "ArrowUp"   || k === "ArrowDown" ||
+        k === "ArrowLeft" || k === "ArrowRight" ||
+        k === "Space") {
+        e.preventDefault();
+    }
 
-/* ---------------------------------------------------------
-   INPUT
---------------------------------------------------------- */
+    if (k === "ArrowUp"   || k === "KeyW") { up   = 1; return; }
+    if (k === "ArrowDown" || k === "KeyS") { down = 1; return; }
 
-let up = 0;
-let down = 0;
+    /* P = pause (only in game) */
+    if (k === "KeyP" && screen === SCREEN_PLAY && !gameOver) {
+        paused = !paused;
+        return;
+    }
 
-document.addEventListener("keydown", function(e) {
+    /* F = toggle fullscreen */
+    if (k === "KeyF") {
+        toggleFullscreen();
+        return;
+    }
 
-    const k = e.code;
+    /* Escape = exit fullscreen */
+    if (k === "Escape") {
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        }
+        return;
+    }
 
-    if (k === "ArrowUp" || k === "KeyW")
-        up = 1;
+    /* Enter / Space advance screens */
+    if (k === "Enter" || k === "Space") {
 
-    else if (k === "ArrowDown" || k === "KeyS")
-        down = 1;
-
-    else if (k === "Enter") {
-
-        if (!started) {
-            started = true;
+        if (screen === SCREEN_MENU) {
+            /* Enter on menu handled by mouse; but keyboard works too.
+               We treat Enter as "Start Game" */
+            startGame();
+            return;
         }
 
-        else if (gameOver) {
+        if (screen === SCREEN_HELP) {
+            screen = SCREEN_MENU;
+            return;
+        }
+
+        if (screen === SCREEN_PLAY && gameOver) {
             restartGame();
+            return;
         }
+
+        return;
     }
 
-    else if (k === "KeyD") {
-
-        difficulty++;
-
-        if (difficulty > 2)
-            difficulty = 0;
+    /* D = cycle difficulty (on menu only) */
+    if (k === "KeyD" && screen === SCREEN_MENU) {
+        difficulty = (difficulty + 1) % 3;
+        return;
     }
 
 });
 
-document.addEventListener("keyup", function(e) {
-
-    const k = e.code;
-
-    if (k === "ArrowUp" || k === "KeyW")
-        up = 0;
-
-    else if (k === "ArrowDown" || k === "KeyS")
-        down = 0;
-
+document.addEventListener("keyup", function (e) {
+    var k = e.code;
+    if (k === "ArrowUp"   || k === "KeyW") up   = 0;
+    if (k === "ArrowDown" || k === "KeyS") down = 0;
 });
 
 /* ---------------------------------------------------------
-   RESET BALL
+   MOUSE – menu button clicks
+   We track click position relative to canvas
 --------------------------------------------------------- */
 
-function resetBall() {
+canvas.addEventListener("click", function (e) {
 
-    ballX = W >> 1;
-    ballY = H >> 1;
+    var rect = canvas.getBoundingClientRect();
+    var scaleX = W / rect.width;
+    var scaleY = H / rect.height;
+    var mx = (e.clientX - rect.left) * scaleX;
+    var my = (e.clientY - rect.top)  * scaleY;
 
-    ballVX = (Math.random() < 0.5) ? 4 : -4;
+    if (screen === SCREEN_MENU) {
 
-    ballVY = ((Math.random() * 4) | 0) - 2;
+        /* START button  220..420  y 155..185 */
+        if (mx >= 220 && mx <= 420 && my >= 155 && my <= 185) {
+            startGame();
+            return;
+        }
 
-    if (ballVY === 0)
-        ballVY = 1;
+        /* HELP button   220..420  y 200..230 */
+        if (mx >= 220 && mx <= 420 && my >= 200 && my <= 230) {
+            screen = SCREEN_HELP;
+            return;
+        }
+
+        /* Difficulty buttons */
+        /* EASY   130..230  y 270..295 */
+        if (mx >= 130 && mx <= 230 && my >= 270 && my <= 295) {
+            difficulty = 0; return;
+        }
+        /* MEDIUM 260..380  y 270..295 */
+        if (mx >= 260 && mx <= 380 && my >= 270 && my <= 295) {
+            difficulty = 1; return;
+        }
+        /* HARD   410..510  y 270..295 */
+        if (mx >= 410 && mx <= 510 && my >= 270 && my <= 295) {
+            difficulty = 2; return;
+        }
+    }
+
+    if (screen === SCREEN_HELP) {
+        screen = SCREEN_MENU;
+        return;
+    }
+});
+
+/* ---------------------------------------------------------
+   FULLSCREEN
+--------------------------------------------------------- */
+
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        canvas.requestFullscreen && canvas.requestFullscreen();
+    } else {
+        document.exitFullscreen && document.exitFullscreen();
+    }
 }
 
 /* ---------------------------------------------------------
-   RESTART
+   GAME FUNCTIONS
 --------------------------------------------------------- */
 
-function restartGame() {
-
+function startGame() {
     playerScore = 0;
-    cpuScore = 0;
+    cpuScore    = 0;
+    gameOver    = false;
+    paused      = false;
+    playerY     = (H >> 1) - (PADDLE_H >> 1);
+    cpuY        = (H >> 1) - (PADDLE_H >> 1);
+    screen      = SCREEN_PLAY;
+    resetBall();
+}
 
-    gameOver = false;
+function resetBall() {
+    ballX  = W >> 1;
+    ballY  = H >> 1;
+    ballVX = (Math.random() < 0.5) ? 4 : -4;
+    ballVY = ((Math.random() * 4) | 0) - 2;
+    if (ballVY === 0) ballVY = 1;
+}
 
+function restartGame() {
+    playerScore = 0;
+    cpuScore    = 0;
+    gameOver    = false;
+    paused      = false;
     resetBall();
 }
 
@@ -177,139 +242,93 @@ function restartGame() {
 
 function update() {
 
-    if (!started || gameOver)
-        return;
+    if (screen !== SCREEN_PLAY || paused || gameOver) return;
 
     /* PLAYER */
-
     playerY += (down - up) * 5;
-
-    if (playerY < 0)
-        playerY = 0;
-
-    else if (playerY > H - PADDLE_H)
-        playerY = H - PADDLE_H;
+    if (playerY < 0)             playerY = 0;
+    if (playerY > H - PADDLE_H)  playerY = H - PADDLE_H;
 
     /* CPU AI */
-
-    const ai = DIFFICULTY[difficulty];
-
-    /*
-       Mistake system:
-       Sometimes AI intentionally reacts wrong
-       making it beatable.
-    */
-
+    var ai = DIFFICULTY[difficulty];
     if (Math.random() > ai.mistake) {
-
-        if (cpuY + (PADDLE_H >> 1) < ballY)
-            cpuY += ai.speed;
-
-        else if (cpuY + (PADDLE_H >> 1) > ballY)
-            cpuY -= ai.speed;
+        var mid = cpuY + (PADDLE_H >> 1);
+        if (mid < ballY) cpuY += ai.speed;
+        else if (mid > ballY) cpuY -= ai.speed;
     }
+    if (cpuY < 0)            cpuY = 0;
+    if (cpuY > H - PADDLE_H) cpuY = H - PADDLE_H;
 
-    if (cpuY < 0)
-        cpuY = 0;
-
-    else if (cpuY > H - PADDLE_H)
-        cpuY = H - PADDLE_H;
-
-    /* BALL */
-
+    /* BALL MOVE */
     ballX += ballVX;
     ballY += ballVY;
 
-    /* WALL */
-
+    /* WALL BOUNCE */
     if (ballY <= 0) {
-
-        ballY = 0;
-
-        ballVY = -ballVY;
+        ballY  = 0;
+        ballVY = Math.abs(ballVY);   /* always bounce down */
+    } else if (ballY >= H - BALL_SIZE) {
+        ballY  = H - BALL_SIZE;
+        ballVY = -Math.abs(ballVY);  /* always bounce up */
     }
 
-    else if (ballY >= H - BALL_SIZE) {
-
-        ballY = H - BALL_SIZE;
-
-        ballVY = -ballVY;
-    }
-
-    /* PLAYER COLLISION */
-
-    if (
-        ballVX < 0 &&
-
-        ballX <= PLAYER_X + PADDLE_W &&
-        ballX >= PLAYER_X &&
-
+    /* PLAYER PADDLE COLLISION */
+    if (ballVX < 0 &&
+        ballX       <= PLAYER_X + PADDLE_W &&
+        ballX       >= PLAYER_X - 2 &&
         ballY + BALL_SIZE >= playerY &&
-        ballY <= playerY + PADDLE_H
-    ) {
+        ballY             <= playerY + PADDLE_H) {
 
-        ballX = PLAYER_X + PADDLE_W;
-
+        ballX  = PLAYER_X + PADDLE_W + 1;
         ballVX = 4;
 
-        /*
-           Add angle depending on hit position
-        */
-
-        ballVY = (
-            (ballY - (playerY + (PADDLE_H >> 1)))
-            / 10
-        ) | 0;
+        /* Angle based on hit position, clamped to avoid vibration */
+        ballVY = ((ballY - (playerY + (PADDLE_H >> 1))) / 10) | 0;
+        if (ballVY === 0) ballVY = (Math.random() < 0.5) ? 1 : -1;
     }
 
-    /* CPU COLLISION */
+    /* CPU PADDLE COLLISION */
+    else if (ballVX > 0 &&
+             ballX + BALL_SIZE >= CPU_X - 1 &&
+             ballX             <= CPU_X + PADDLE_W &&
+             ballY + BALL_SIZE >= cpuY &&
+             ballY             <= cpuY + PADDLE_H) {
 
-    else if (
-        ballVX > 0 &&
-
-        ballX + BALL_SIZE >= CPU_X &&
-        ballX <= CPU_X + PADDLE_W &&
-
-        ballY + BALL_SIZE >= cpuY &&
-        ballY <= cpuY + PADDLE_H
-    ) {
-
-        ballX = CPU_X - BALL_SIZE;
-
+        ballX  = CPU_X - BALL_SIZE - 1;
         ballVX = -4;
 
-        ballVY = (
-            (ballY - (cpuY + (PADDLE_H >> 1)))
-            / 10
-        ) | 0;
+        ballVY = ((ballY - (cpuY + (PADDLE_H >> 1))) / 10) | 0;
+        if (ballVY === 0) ballVY = (Math.random() < 0.5) ? 1 : -1;
     }
 
-    /* SCORE FIX */
-
-    /*
-       Score immediately when ball crosses edge.
-       No late paddle save bug anymore.
-    */
-
+    /* SCORING */
     if (ballX < -BALL_SIZE) {
-
         cpuScore++;
-
-        if (cpuScore >= WIN_SCORE)
-            gameOver = true;
-
-        resetBall();
-    }
-
-    else if (ballX > W + BALL_SIZE) {
-
+        if (cpuScore >= WIN_SCORE) gameOver = true;
+        else resetBall();
+    } else if (ballX > W + BALL_SIZE) {
         playerScore++;
-
-        if (playerScore >= WIN_SCORE)
-            gameOver = true;
-
-        resetBall();
+        if (playerScore >= WIN_SCORE) gameOver = true;
+        else resetBall();
     }
+}
+
+/* ---------------------------------------------------------
+   DRAW HELPERS
+--------------------------------------------------------- */
+
+function fillBtn(x, y, w, h, active) {
+    ctx.fillStyle = active ? "#555" : "#1a1a1a";
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = active ? "#aaa" : "#444";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+}
+
+function centeredText(txt, y, size) {
+    ctx.font = size + "px monospace";
+    var tw = ctx.measureText(txt).width;
+    ctx.fillText(txt, (W - tw) >> 1, y);
 }
 
 /* ---------------------------------------------------------
@@ -319,129 +338,144 @@ function update() {
 function draw() {
 
     /* CLEAR */
-
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, W, H);
 
-    ctx.fillStyle = "#AAA";
+    /* ---------- MENU SCREEN ---------- */
+    if (screen === SCREEN_MENU) {
 
-    /* START SCREEN */
+        ctx.fillStyle = "#aaa";
+        centeredText("TERMINAL ARCADE", 60, 18);
 
-    if (!started) {
+        ctx.fillStyle = "#fff";
+        centeredText("RETRO BALL", 100, 22);
 
+        /* START button */
+        fillBtn(220, 155, 200, 30, false);
+        ctx.fillStyle = "#ccc";
         ctx.font = "14px monospace";
+        ctx.fillText("START GAME", 268, 176);
 
-        ctx.fillText("TERMINAL ARCADE", 210, 110);
+        /* HELP button */
+        fillBtn(220, 200, 200, 30, false);
+        ctx.fillStyle = "#ccc";
+        ctx.font = "14px monospace";
+        ctx.fillText("HELP / KEYS", 263, 221);
 
-        ctx.fillText("RETRO BALL", 240, 145);
+        /* Difficulty label */
+        ctx.fillStyle = "#777";
+        ctx.font = "12px monospace";
+        centeredText("SELECT DIFFICULTY:", 260, 12);
 
-        ctx.fillText("ENTER = START", 225, 190);
+        /* 3 difficulty buttons */
+        var dnames = ["EASY", "MEDIUM", "HARD"];
+        var dbx    = [130,    260,      410];
+        var dbw    = [100,    120,      100];
 
-        ctx.fillText("D = CHANGE DIFFICULTY", 170, 220);
+        for (var i = 0; i < 3; i++) {
+            fillBtn(dbx[i], 270, dbw[i], 25, difficulty === i);
+            ctx.fillStyle = difficulty === i ? "#fff" : "#888";
+            ctx.font = "12px monospace";
+            var tw = ctx.measureText(dnames[i]).width;
+            ctx.fillText(dnames[i], dbx[i] + ((dbw[i] - tw) >> 1), 288);
+        }
 
-        ctx.fillText(
-            "MODE: " + DIFFICULTY[difficulty].name,
-            215,
-            260
-        );
+        ctx.fillStyle = "#444";
+        ctx.font = "11px monospace";
+        centeredText("D = CYCLE DIFFICULTY  |  ENTER = START  |  F = FULLSCREEN", 340, 11);
 
         return;
     }
 
-    /* GAME OVER */
+    /* ---------- HELP SCREEN ---------- */
+    if (screen === SCREEN_HELP) {
 
-    if (gameOver) {
+        ctx.fillStyle = "#aaa";
+        centeredText("CONTROLS", 50, 16);
 
-        ctx.font = "16px monospace";
+        ctx.fillStyle = "#888";
+        ctx.font = "13px monospace";
 
-        if (playerScore > cpuScore)
-            ctx.fillText("YOU WIN", 250, 140);
-        else
-            ctx.fillText("CPU WINS", 245, 140);
+        var lines = [
+            "W / UP ARROW   - Move paddle up",
+            "S / DOWN ARROW - Move paddle down",
+            "P              - Pause / Resume",
+            "F              - Toggle fullscreen",
+            "ESC            - Exit fullscreen",
+            "D              - Change difficulty (menu)",
+            "ENTER          - Start / Restart"
+        ];
 
-        ctx.fillText(
-            playerScore + " - " + cpuScore,
-            270,
-            180
-        );
+        for (var i = 0; i < lines.length; i++) {
+            var tw = ctx.measureText(lines[i]).width;
+            ctx.fillText(lines[i], (W - tw) >> 1, 90 + i * 26);
+        }
 
-        ctx.fillText(
-            "PRESS ENTER",
-            225,
-            240
-        );
+        ctx.fillStyle = "#555";
+        centeredText("CLICK OR ENTER TO GO BACK", 330, 12);
+
+        return;
     }
 
-    /* CENTER LINE */
+    /* ---------- PLAY SCREEN ---------- */
 
-    let y = 0;
-
-    while (y < H) {
-
+    /* Center dashed line */
+    ctx.fillStyle = "#222";
+    for (var y = 0; y < H; y += 18) {
         ctx.fillRect((W >> 1) - 1, y, 2, 10);
-
-        y += 18;
     }
 
-    /* PLAYER */
+    /* Paddles */
+    ctx.fillStyle = "#aaa";
+    ctx.fillRect(PLAYER_X, playerY | 0, PADDLE_W, PADDLE_H);
+    ctx.fillRect(CPU_X,    cpuY    | 0, PADDLE_W, PADDLE_H);
 
-    ctx.fillRect(
-        PLAYER_X,
-        playerY | 0,
-        PADDLE_W,
-        PADDLE_H
-    );
+    /* Ball */
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(ballX | 0, ballY | 0, BALL_SIZE, BALL_SIZE);
 
-    /* CPU */
-
-    ctx.fillRect(
-        CPU_X,
-        cpuY | 0,
-        PADDLE_W,
-        PADDLE_H
-    );
-
-    /* BALL */
-
-    ctx.fillRect(
-        ballX | 0,
-        ballY | 0,
-        BALL_SIZE,
-        BALL_SIZE
-    );
-
-    /* SCORE */
-
+    /* Score */
+    ctx.fillStyle = "#aaa";
     ctx.font = "16px monospace";
-
     ctx.fillText(playerScore, 140, 25);
+    ctx.fillText(cpuScore,    W - 150, 25);
 
-    ctx.fillText(cpuScore, W - 150, 25);
-
-    /* MODE */
-
+    /* Difficulty label top center */
+    ctx.fillStyle = "#444";
     ctx.font = "11px monospace";
+    var dlabel = DIFFICULTY[difficulty].name;
+    var dtw = ctx.measureText(dlabel).width;
+    ctx.fillText(dlabel, (W - dtw) >> 1, 20);
 
-    ctx.fillText(
-        DIFFICULTY[difficulty].name,
-        (W >> 1) - 25,
-        20
-    );
+    /* PAUSED overlay */
+    if (paused) {
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "#aaa";
+        centeredText("PAUSED", 175, 20);
+        ctx.fillStyle = "#555";
+        centeredText("PRESS P TO RESUME", 210, 13);
+    }
+
+    /* GAME OVER overlay */
+    if (gameOver) {
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "#fff";
+        centeredText(playerScore > cpuScore ? "YOU WIN!" : "CPU WINS", 145, 18);
+        ctx.fillStyle = "#aaa";
+        centeredText(playerScore + "  -  " + cpuScore, 180, 16);
+        ctx.fillStyle = "#666";
+        centeredText("PRESS ENTER TO PLAY AGAIN", 230, 13);
+        centeredText("CLICK RETRO BALL TO RETURN TO MENU", 255, 11);
+    }
 }
 
 /* ---------------------------------------------------------
-   MAIN LOOP
+   MAIN LOOP  – fixed ~30 FPS, ultra-lightweight
 --------------------------------------------------------- */
 
-/*
-   Fixed 30 FPS
-   Lighter than requestAnimationFrame
-*/
-
-setInterval(function() {
-
+setInterval(function () {
     update();
-
     draw();
-
 }, 33);
