@@ -1,47 +1,56 @@
 /* =========================================================
-   TERMINAL PONG — ULTRA LIGHT VERSION
-   Designed for OLD PCs and Linux systems
-   No audio
-   No overlays
-   No animations
-   No transparency
-   No gradients
-   No heavy math
-   Fixed 30 FPS
+   RETROBALL.JS
+   ULTRA-LIGHT TERMINAL PONG
+   Optimized for VERY old Linux/Windows PCs
    ========================================================= */
 
 "use strict";
 
-/* ---------- CANVAS ---------- */
+/* ---------------------------------------------------------
+   CANVAS
+--------------------------------------------------------- */
 
 const canvas = document.getElementById("pong");
 const ctx = canvas.getContext("2d", {
-  alpha: false,
-  desynchronized: true
+    alpha: false,
+    desynchronized: true
 });
 
 const W = canvas.width;
 const H = canvas.height;
 
-/* Disable smoothing */
+/* Disable smoothing completely */
 ctx.imageSmoothingEnabled = false;
 
-/* ---------- GAME STATE ---------- */
+/* ---------------------------------------------------------
+   GAME STATE
+--------------------------------------------------------- */
 
-let running = false;
+let gameStarted = false;
 
-/* ---------- PLAYER ---------- */
+/* ---------------------------------------------------------
+   SCORES
+--------------------------------------------------------- */
 
-const PADDLE_W = 4;
-const PADDLE_H = 44;
+let playerScore = 0;
+let cpuScore = 0;
+
+/* ---------------------------------------------------------
+   PADDLES
+--------------------------------------------------------- */
+
+const PW = 4;
+const PH = 40;
 
 const PLAYER_X = 8;
 const CPU_X = W - 12;
 
-let playerY = (H >> 1) - (PADDLE_H >> 1);
-let cpuY    = (H >> 1) - (PADDLE_H >> 1);
+let playerY = (H >> 1) - (PH >> 1);
+let cpuY = (H >> 1) - (PH >> 1);
 
-/* ---------- BALL ---------- */
+/* ---------------------------------------------------------
+   BALL
+--------------------------------------------------------- */
 
 let ballX = W >> 1;
 let ballY = H >> 1;
@@ -49,211 +58,229 @@ let ballY = H >> 1;
 let ballVX = 4;
 let ballVY = 2;
 
-/* ---------- SCORE ---------- */
+/* ---------------------------------------------------------
+   INPUT
+--------------------------------------------------------- */
 
-let playerScore = 0;
-let cpuScore = 0;
-
-/* ---------- INPUT ---------- */
-
-let up = false;
-let down = false;
+let up = 0;
+let down = 0;
 
 document.addEventListener("keydown", function(e) {
 
-  if (e.code === "ArrowUp" || e.code === "KeyW")
-    up = true;
+    const c = e.code;
 
-  if (e.code === "ArrowDown" || e.code === "KeyS")
-    down = true;
+    if (c === "ArrowUp" || c === "KeyW")
+        up = 1;
 
-  if (e.code === "Enter")
-    running = true;
+    else if (c === "ArrowDown" || c === "KeyS")
+        down = 1;
+
+    else if (c === "Enter")
+        gameStarted = true;
 
 });
 
 document.addEventListener("keyup", function(e) {
 
-  if (e.code === "ArrowUp" || e.code === "KeyW")
-    up = false;
+    const c = e.code;
 
-  if (e.code === "ArrowDown" || e.code === "KeyS")
-    down = false;
+    if (c === "ArrowUp" || c === "KeyW")
+        up = 0;
+
+    else if (c === "ArrowDown" || c === "KeyS")
+        down = 0;
 
 });
 
-/* ---------- RESET BALL ---------- */
+/* ---------------------------------------------------------
+   RESET BALL
+--------------------------------------------------------- */
 
 function resetBall() {
 
-  ballX = W >> 1;
-  ballY = H >> 1;
+    ballX = W >> 1;
+    ballY = H >> 1;
 
-  ballVX = (Math.random() < 0.5) ? 4 : -4;
+    ballVX = (Math.random() < 0.5) ? 4 : -4;
 
-  /* VERY LIGHT RANDOM */
-  ballVY = ((Math.random() * 4) | 0) - 2;
+    ballVY = ((Math.random() * 4) | 0) - 2;
 
-  if (ballVY === 0)
-    ballVY = 1;
+    if (ballVY === 0)
+        ballVY = 1;
 }
 
-/* ---------- UPDATE ---------- */
+/* ---------------------------------------------------------
+   UPDATE
+--------------------------------------------------------- */
 
 function update() {
 
-  if (!running)
-    return;
+    if (!gameStarted)
+        return;
 
-  /* PLAYER */
+    /* PLAYER */
 
-  if (up)
-    playerY -= 5;
+    playerY += (down - up) * 5;
 
-  if (down)
-    playerY += 5;
+    if (playerY < 0)
+        playerY = 0;
 
-  /* LIMITS */
+    else if (playerY > H - PH)
+        playerY = H - PH;
 
-  if (playerY < 0)
-    playerY = 0;
+    /* SIMPLE CPU */
 
-  if (playerY > H - PADDLE_H)
-    playerY = H - PADDLE_H;
+    if (cpuY + 18 < ballY)
+        cpuY += 3;
 
-  /* SIMPLE CPU */
+    else if (cpuY + 18 > ballY)
+        cpuY -= 3;
 
-  if (cpuY + 20 < ballY)
-    cpuY += 3;
-  else if (cpuY + 20 > ballY)
-    cpuY -= 3;
+    if (cpuY < 0)
+        cpuY = 0;
 
-  /* LIMIT CPU */
+    else if (cpuY > H - PH)
+        cpuY = H - PH;
 
-  if (cpuY < 0)
-    cpuY = 0;
+    /* BALL */
 
-  if (cpuY > H - PADDLE_H)
-    cpuY = H - PADDLE_H;
+    ballX += ballVX;
+    ballY += ballVY;
 
-  /* BALL */
+    /* WALL */
 
-  ballX += ballVX;
-  ballY += ballVY;
+    if (ballY <= 0 || ballY >= H - 4)
+        ballVY = -ballVY;
 
-  /* TOP/BOTTOM */
+    /* PLAYER HIT */
 
-  if (ballY <= 0 || ballY >= H - 4)
-    ballVY = -ballVY;
+    if (
+        ballX <= PLAYER_X + PW &&
+        ballY + 4 >= playerY &&
+        ballY <= playerY + PH
+    ) {
+        ballVX = 4;
+    }
 
-  /* PLAYER HIT */
+    /* CPU HIT */
 
-  if (
-    ballX <= PLAYER_X + PADDLE_W &&
-    ballY + 4 >= playerY &&
-    ballY <= playerY + PADDLE_H
-  ) {
-    ballVX = 4;
-  }
+    else if (
+        ballX + 4 >= CPU_X &&
+        ballY + 4 >= cpuY &&
+        ballY <= cpuY + PH
+    ) {
+        ballVX = -4;
+    }
 
-  /* CPU HIT */
+    /* SCORE */
 
-  if (
-    ballX + 4 >= CPU_X &&
-    ballY + 4 >= cpuY &&
-    ballY <= cpuY + PADDLE_H
-  ) {
-    ballVX = -4;
-  }
+    if (ballX < 0) {
 
-  /* SCORE */
+        cpuScore++;
 
-  if (ballX < 0) {
-    cpuScore++;
-    resetBall();
-  }
+        resetBall();
+    }
 
-  if (ballX > W) {
-    playerScore++;
-    resetBall();
-  }
+    else if (ballX > W) {
+
+        playerScore++;
+
+        resetBall();
+    }
 }
 
-/* ---------- DRAW ---------- */
+/* ---------------------------------------------------------
+   DRAW
+--------------------------------------------------------- */
 
 function draw() {
 
-  /* CLEAR */
+    /* CLEAR SCREEN */
 
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
 
-  /* COLOR */
+    /* MAIN COLOR */
 
-  ctx.fillStyle = "#AAA";
+    ctx.fillStyle = "#AAA";
 
-  /* CENTER LINE */
+    /* START SCREEN */
 
-  for (let y = 0; y < H; y += 16) {
-    ctx.fillRect((W >> 1) - 1, y, 2, 8);
-  }
+    if (!gameStarted) {
 
-  /* PLAYER */
+        ctx.font = "14px monospace";
 
-  ctx.fillRect(
-    PLAYER_X,
-    playerY | 0,
-    PADDLE_W,
-    PADDLE_H
-  );
+        ctx.fillText("TERMINAL ARCADE", 220, 120);
 
-  /* CPU */
+        ctx.fillText("RETRO BALL", 250, 150);
 
-  ctx.fillRect(
-    CPU_X,
-    cpuY | 0,
-    PADDLE_W,
-    PADDLE_H
-  );
+        ctx.fillText("PRESS ENTER TO START", 190, 210);
 
-  /* BALL */
+        ctx.fillText("W/S OR ARROW KEYS", 200, 240);
 
-  ctx.fillRect(
-    ballX | 0,
-    ballY | 0,
-    4,
-    4
-  );
+        return;
+    }
 
-  /* TEXT */
+    /* CENTER LINE */
 
-  ctx.font = "12px monospace";
+    let y = 0;
 
-  ctx.fillText(playerScore, 120, 20);
-  ctx.fillText(cpuScore, W - 120, 20);
+    while (y < H) {
 
-  /* START SCREEN */
+        ctx.fillRect((W >> 1) - 1, y, 2, 8);
 
-  if (!running) {
+        y += 16;
+    }
 
-    ctx.fillText("TERMINAL PONG", 220, 140);
-    ctx.fillText("PRESS ENTER", 225, 170);
+    /* PLAYER */
 
-    ctx.fillText("W/S OR ARROWS", 210, 210);
+    ctx.fillRect(
+        PLAYER_X,
+        playerY | 0,
+        PW,
+        PH
+    );
 
-  }
+    /* CPU */
+
+    ctx.fillRect(
+        CPU_X,
+        cpuY | 0,
+        PW,
+        PH
+    );
+
+    /* BALL */
+
+    ctx.fillRect(
+        ballX | 0,
+        ballY | 0,
+        4,
+        4
+    );
+
+    /* SCORE */
+
+    ctx.font = "14px monospace";
+
+    ctx.fillText(playerScore, 120, 20);
+
+    ctx.fillText(cpuScore, W - 120, 20);
 }
 
-/* ---------- MAIN LOOP ---------- */
+/* ---------------------------------------------------------
+   MAIN LOOP
+--------------------------------------------------------- */
 
 /*
-  setInterval is lighter on old systems
-  than uncapped requestAnimationFrame
+   30 FPS FIXED LOOP
+   MUCH LIGHTER than requestAnimationFrame
 */
 
 setInterval(function() {
 
-  update();
-  draw();
+    update();
 
-}, 33); // ~30 FPS
+    draw();
+
+}, 33);
