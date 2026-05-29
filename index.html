@@ -1,167 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Browser title -->
-  <title>RETRO STRIKE 198X</title>
+<title>Terminal Arcade</title>
 
-  <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- Outer retro window -->
-  <div id="app-window">
+<div id="terminal">
 
-    <!-- Title bar -->
-    <div id="title-bar">
+    <!-- HEADER -->
 
-      <div id="title-bar-dots">
-        <span class="dot"></span>
-        <span class="dot"></span>
-        <span class="dot"></span>
-      </div>
-
-      <span id="title-text">RETRO STRIKE 198X</span>
-
-      <button id="btn-arrow" title="Minimize">
-        &#9660;
-      </button>
-
+    <div id="topbar">
+        <span>TERMINAL ARCADE</span>
     </div>
 
-    <!-- Score bar -->
-    <div id="score-bar">
-      <span id="score-player">
-        PLR &nbsp;<span id="p-score">0</span>
-      </span>
+    <!-- TERMINAL TEXT -->
 
-      <span id="score-divider">|</span>
-
-      <span id="score-ai">
-        CPU &nbsp;<span id="a-score">0</span>
-      </span>
+    <div id="intro">
+        <p>> Lightweight Retro Linux Arcade</p>
+        <p>> Select a game below</p>
     </div>
 
-    <!-- Canvas -->
-    <div id="canvas-wrap">
+    <!-- GAME GRID -->
 
-      <canvas id="pong" width="600" height="360"></canvas>
+    <div id="games">
 
-      <!-- Overlay -->
-      <div id="overlay" class="screen active">
+        <!-- GAME CARD -->
 
-        <!-- Main Menu -->
-        <div id="menu-main" class="menu active">
+        <div class="game-card" onclick="loadGame('RetroBall.js')">
 
-          <div class="menu-title">
-            RETRO STRIKE 198X
-          </div>
+            <img src="RetroBall.png" alt="Retro Ball">
 
-          <div class="menu-sub">
-            arcade terminal edition
-          </div>
-
-          <div class="menu-items">
-
-            <button class="retro-btn" id="btn-start">
-              ▶ &nbsp;START
-            </button>
-
-            <button class="retro-btn" id="btn-difficulty">
-              AI: MEDIUM
-            </button>
-
-            <button class="retro-btn" id="btn-sound">
-              SOUND: ON
-            </button>
-
-            <button class="retro-btn" id="btn-quit">
-              ■ &nbsp;QUIT
-            </button>
-
-          </div>
-
-          <!-- Controls -->
-          <div class="menu-hint">
-            W/S or ↑↓ to move
-            &nbsp;|&nbsp;
-            ESC = pause
-            &nbsp;|&nbsp;
-            ENTER = start
-          </div>
-
-          <!-- Signature -->
-          <div class="menu-credit">
-            made by MANAN<br>
-            feedback: yourgmail@gmail.com
-          </div>
+            <div class="game-info">
+                <h3>RETRO BALL</h3>
+                <p>Classic terminal pong.</p>
+            </div>
 
         </div>
 
-        <!-- Pause Menu -->
-        <div id="menu-pause" class="menu">
-
-          <div class="menu-title">
-            — PAUSED —
-          </div>
-
-          <div class="menu-items">
-
-            <button class="retro-btn" id="btn-resume">
-              ▶ &nbsp;RESUME
-            </button>
-
-            <button class="retro-btn" id="btn-restart">
-              ↺ &nbsp;RESTART
-            </button>
-
-            <button class="retro-btn" id="btn-mainmenu">
-              ⌂ &nbsp;MAIN MENU
-            </button>
-
-          </div>
-
-        </div>
-
-        <!-- Game Over -->
-        <div id="menu-gameover" class="menu">
-
-          <div class="menu-title" id="go-title">
-            GAME OVER
-          </div>
-
-          <div class="menu-sub" id="go-sub">
-            YOU WIN
-          </div>
-
-          <div class="menu-items">
-
-            <button class="retro-btn" id="btn-playagain">
-              ▶ &nbsp;PLAY AGAIN
-            </button>
-
-            <button class="retro-btn" id="btn-gomainmenu">
-              ⌂ &nbsp;MAIN MENU
-            </button>
-
-          </div>
-
-        </div>
-
-      </div>
     </div>
 
-    <!-- Status bar -->
-    <div id="status-bar">
-      <span id="status-msg">READY</span>
-      <span id="status-fps">-- FPS</span>
+    <!-- GAME WINDOW -->
+
+    <div id="game-window">
+
+        <div id="game-header">
+            <span>RUNNING GAME</span>
+        </div>
+
+        <canvas id="pong" width="640" height="360"></canvas>
+
     </div>
 
-  </div>
+</div>
 
-  <script src="game.js"></script>
+<script>
+
+function loadGame(file) {
+
+    /* remove previous script */
+
+    const old = document.getElementById("game-script");
+
+    if (old)
+        old.remove();
+
+    /* load new game */
+
+    const script = document.createElement("script");
+
+    script.src = file;
+
+    script.id = "game-script";
+
+    document.body.appendChild(script);
+}
+
+</script>
 
 </body>
 </html>
