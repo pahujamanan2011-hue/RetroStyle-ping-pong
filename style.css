@@ -1,73 +1,174 @@
-html, body {
+/* =========================================================
+   TERMINAL ARCADE
+   Ultra Lightweight CSS
+   ========================================================= */
+
+html,
+body {
+
     margin: 0;
     padding: 0;
+
     background: #000;
+
     color: #aaa;
+
     font-family: monospace;
+
     image-rendering: pixelated;
-    overflow: hidden;
+
 }
+
+/* MAIN TERMINAL */
 
 #terminal {
+
     width: 760px;
+
     margin: 20px auto;
+
     border: 2px solid #444;
+
     background: #050505;
+
 }
+
+/* TOP BAR */
 
 #topbar {
+
     padding: 10px;
+
     border-bottom: 2px solid #333;
+
     background: #111;
+
     font-size: 18px;
+
     font-weight: bold;
-    text-align: center;
+
 }
 
-#intro, #games, #game-window {
-    padding: 10px;
+/* INTRO */
+
+#intro {
+
+    padding: 12px;
+
+    border-bottom: 1px solid #222;
+
 }
+
+#intro p {
+
+    margin: 4px 0;
+
+}
+
+/* GAME GRID */
+
+#games {
+
+    padding: 10px;
+
+}
+
+/* GAME CARD */
 
 .game-card {
+
     display: flex;
+
     align-items: center;
+
     gap: 12px;
+
     padding: 10px;
+
     border: 1px solid #333;
+
     background: #0b0b0b;
+
     cursor: pointer;
+
     margin-bottom: 10px;
+
 }
 
-.game-card:hover { background: #111; }
+.game-card:hover {
+
+    background: #111;
+
+}
+
+/* IMAGE */
+
+.game-card img {
+
+    width: 160px;
+
+    height: 90px;
+
+    object-fit: cover;
+
+    border: 1px solid #444;
+
+}
+
+/* GAME TEXT */
+
+.game-info h3 {
+
+    margin: 0 0 6px 0;
+
+    color: #ddd;
+
+    font-size: 16px;
+
+}
+
+.game-info p {
+
+    margin: 0;
+
+    color: #888;
+
+    font-size: 13px;
+
+}
+
+/* GAME WINDOW */
+
+#game-window {
+
+    border-top: 2px solid #222;
+
+    padding: 10px;
+
+}
+
+/* GAME HEADER */
 
 #game-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
+
+    margin-bottom: 10px;
+
     padding-bottom: 6px;
+
     border-bottom: 1px solid #222;
+
 }
 
-.retro-btn {
-    background: #111;
-    color: #aaa;
-    border: 1px solid #444;
-    padding: 4px 10px;
-    font-family: monospace;
-    cursor: pointer;
-}
-
-.retro-btn:hover {
-    background: #222;
-    color: #fff;
-}
+/* CANVAS */
 
 canvas {
+
     display: block;
+
     background: #000;
+
     border: 2px solid #333;
+
     image-rendering: pixelated;
-    image-rendering: crisp-edges;
+
 }
