@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAME VISUALISER — PONG</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Outer retro window wrapper -->
+  <div id="app-window">
+
+    <!-- Title bar -->
+    <div id="title-bar">
+      <div id="title-bar-dots">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+      <span id="title-text">GAME VISUALISER</span>
+      <button id="btn-arrow" title="Minimize">&#9660;</button>
+    </div>
+
+    <!-- Score bar -->
+    <div id="score-bar">
+      <span id="score-player">PLR &nbsp;<span id="p-score">0</span></span>
+      <span id="score-divider">|</span>
+      <span id="score-ai">CPU &nbsp;<span id="a-score">0</span></span>
+    </div>
+
+    <!-- Canvas area -->
+    <div id="canvas-wrap">
+      <canvas id="pong" width="600" height="360"></canvas>
+
+      <!-- Overlay menus -->
+      <div id="overlay" class="screen active">
+
+        <!-- Main Menu -->
+        <div id="menu-main" class="menu active">
+          <div class="menu-title">PONG.EXE</div>
+          <div class="menu-sub">v1.0 — retro edition</div>
+          <div class="menu-items">
+            <button class="retro-btn" id="btn-start">▶ &nbsp;START</button>
+            <button class="retro-btn" id="btn-difficulty">AI: MEDIUM</button>
+            <button class="retro-btn" id="btn-sound">SOUND: ON</button>
+            <button class="retro-btn" id="btn-quit">■ &nbsp;QUIT</button>
+          </div>
+          <div class="menu-hint">W/S or ↑↓ to move &nbsp;|&nbsp; ESC = pause &nbsp;|&nbsp; ENTER = start</div>
+        </div>
+
+        <!-- Pause Menu -->
+        <div id="menu-pause" class="menu">
+          <div class="menu-title">— PAUSED —</div>
+          <div class="menu-items">
+            <button class="retro-btn" id="btn-resume">▶ &nbsp;RESUME</button>
+            <button class="retro-btn" id="btn-restart">↺ &nbsp;RESTART</button>
+            <button class="retro-btn" id="btn-mainmenu">⌂ &nbsp;MAIN MENU</button>
+          </div>
+        </div>
+
+        <!-- Game Over -->
+        <div id="menu-gameover" class="menu">
+          <div class="menu-title" id="go-title">GAME OVER</div>
+          <div class="menu-sub" id="go-sub">YOU WIN</div>
+          <div class="menu-items">
+            <button class="retro-btn" id="btn-playagain">▶ &nbsp;PLAY AGAIN</button>
+            <button class="retro-btn" id="btn-gomainmenu">⌂ &nbsp;MAIN MENU</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div id="status-bar">
+      <span id="status-msg">READY</span>
+      <span id="status-fps">-- FPS</span>
+    </div>
+
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
