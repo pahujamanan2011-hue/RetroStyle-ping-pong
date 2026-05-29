@@ -3,9 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Terminal Arcade</title>
-
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,71 +11,77 @@
 <div id="terminal">
 
     <!-- HEADER -->
-
     <div id="topbar">
         <span>TERMINAL ARCADE</span>
     </div>
 
     <!-- TERMINAL TEXT -->
-
     <div id="intro">
         <p>> Lightweight Retro Linux Arcade</p>
-        <p>> Select a game below</p>
+        <p>> Select a game below to play</p>
     </div>
 
     <!-- GAME GRID -->
-
     <div id="games">
 
-        <!-- GAME CARD -->
-
-        <div class="game-card" onclick="loadGame('RetroBall.js')">
-
+        <div class="game-card" onclick="launchGame('RetroBall.js')">
             <img src="RetroBall.png" alt="Retro Ball">
-
             <div class="game-info">
                 <h3>RETRO BALL</h3>
-                <p>Classic terminal pong.</p>
+                <p>Classic terminal pong. Beat the CPU.</p>
+                <p class="hint">Click to play &bull; F = fullscreen &bull; P = pause</p>
             </div>
-
         </div>
 
     </div>
 
-    <!-- GAME WINDOW -->
-
-    <div id="game-window">
-
-        <div id="game-header">
-            <span>RUNNING GAME</span>
-        </div>
-
-        <canvas id="pong" width="640" height="360"></canvas>
-
+    <!-- STATUS LINE -->
+    <div id="statusbar">
+        <span id="status-msg">> No game loaded.</span>
     </div>
 
 </div>
 
+<!-- FULLSCREEN OVERLAY – hidden until a game is launched -->
+<div id="overlay" style="display:none;">
+    <canvas id="pong" width="640" height="360"></canvas>
+    <div id="overlay-hint">ESC or F = exit fullscreen &nbsp;|&nbsp; P = pause</div>
+</div>
+
 <script>
 
-function loadGame(file) {
+var currentScript = null;
 
-    /* remove previous script */
+function launchGame(file) {
 
-    const old = document.getElementById("game-script");
+    /* Show overlay canvas */
+    var overlay = document.getElementById("overlay");
+    overlay.style.display = "flex";
 
-    if (old)
-        old.remove();
+    /* Remove previous game script */
+    if (currentScript) {
+        currentScript.remove();
+        currentScript = null;
+    }
 
-    /* load new game */
+    /* Reset canvas so the new game gets a clean state */
+    var oldCanvas = document.getElementById("pong");
+    var newCanvas = document.createElement("canvas");
+    newCanvas.id     = "pong";
+    newCanvas.width  = 640;
+    newCanvas.height = 360;
+    oldCanvas.parentNode.replaceChild(newCanvas, oldCanvas);
 
-    const script = document.createElement("script");
-
-    script.src = file;
-
-    script.id = "game-script";
-
+    /* Load game script */
+    var script   = document.createElement("script");
+    script.src   = file;
+    script.id    = "game-script";
+    currentScript = script;
     document.body.appendChild(script);
+
+    /* Update status bar */
+    document.getElementById("status-msg").textContent =
+        "> Running: " + file + "   [F = fullscreen  P = pause  ESC = exit fullscreen]";
 }
 
 </script>
