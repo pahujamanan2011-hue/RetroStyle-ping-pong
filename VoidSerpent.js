@@ -72,27 +72,26 @@ var TONGUE_TICKS = 6;
 var foodBlink = 0;
 
 /* power-ups
-   type 1 = BONUS  – appears every 5 apples, collect for time-based bonus pts (no grow)
-   type 2 = DOUBLE – appears every 30 seconds, doubles score for 10 seconds, snake grows normally
+   type 1 = BONUS  – spawns every 5 apples, on screen 7s, collect = +5 pts, no growth
+   type 2 = DOUBLE – spawns every 50 seconds, gives 20s effect: +2 pts per apple, grows by 1
 */
-var pu          = null;   /* {x,y,type} active power-up on grid */
-var puTimer     = 0;      /* ticks remaining before PU disappears from grid */
+var pu          = null;
+var puTimer     = 0;
 var PU_TICKS    = 210;    /* 7 seconds on screen at 30fps */
 var puBlink     = 0;
 
-/* Bonus PU: track apples eaten */
-var applesEaten  = 0;     /* total apples eaten this game */
-var bonusEvery   = 5;     /* spawn bonus PU every N apples */
-var nextBonusAt  = 5;     /* next apple count to spawn bonus */
+/* Bonus PU */
+var applesEaten  = 0;
+var nextBonusAt  = 5;
 
-/* Double PU: time-based spawn every 30 seconds */
-var doublePuClock  = 0;       /* ticks since last double PU (or game start) */
-var DOUBLE_PU_EVERY = 900;    /* 30 seconds at 30fps */
+/* Double PU */
+var doublePuClock   = 0;
+var DOUBLE_PU_EVERY = 1500;   /* 50 seconds at 30fps */
 
-/* active double-score effect */
+/* Active double effect */
 var doubleActive  = false;
-var doubleTicks   = 0;        /* ticks remaining for double effect */
-var DOUBLE_EFFECT = 300;      /* 10 seconds at 30fps */
+var doubleTicks   = 0;
+var DOUBLE_EFFECT = 600;      /* 20 seconds at 30fps */
 
 /* speed: ticks per move (lower = faster) */
 var BASE_SPEED  = 8;    /* ~3.75 moves/sec at 30fps */
@@ -213,8 +212,14 @@ canvas.addEventListener("click", function (e) {
     var mx = (e.clientX - rect.left) * scaleX;
     var my = (e.clientY - rect.top)  * scaleY;
 
+    /* Pause button – top right during play */
+    if (screen === SC_PLAY && !newHi) {
+        if (mx >= W - 38 && mx <= W - 8 && my >= 5 && my <= 23) {
+            paused = !paused; return;
+        }
+    }
+
     if (screen === SC_MENU) {
-        /* START button 220..420  y 160..190 */
         if (mx >= 220 && mx <= 420 && my >= 160 && my <= 190) {
             initGame(); screen = SC_PLAY;
         }
@@ -316,7 +321,7 @@ function update() {
         if (puTimer <= 0) { pu = null; }
     }
 
-    /* Double PU clock – spawn type 2 every 30 seconds regardless of score */
+    /* Double PU clock – spawn type 2 every 50 seconds */
     doublePuClock++;
     if (doublePuClock >= DOUBLE_PU_EVERY) {
         doublePuClock = 0;
@@ -359,18 +364,15 @@ function update() {
     /* Eat power-up? */
     if (pu && nx === pu.x && ny === pu.y) {
         if (pu.type === 1) {
-            /* BONUS: 2 pts per second remaining, no growth */
-            var secsLeft = ((puTimer / 30) | 0);
-            if (secsLeft < 1) secsLeft = 1;
-            var bonus = secsLeft * 2;
-            score += bonus;
+            /* BONUS: flat +5 points, no growth */
+            score += 5;
             if (score > hiScore) { hiScore = score; newHi = true; saveHi(); }
             snake.pop(); /* no growth */
         } else {
-            /* DOUBLE: activate 10-second double score, snake grows normally */
+            /* DOUBLE: 20s effect, snake grows by 1 on collection */
             doubleActive = true;
             doubleTicks  = DOUBLE_EFFECT;
-            /* snake grows: do NOT pop tail */
+            /* tail stays – snake grows by 1 block on collection */
         }
         pu = null;
         return;
@@ -467,6 +469,13 @@ function draw() {
     ctx.font = "11px monospace";
     var spd_label = "SPD:" + (BASE_SPEED - speed + 1);
     ctx.fillText(spd_label, W - 60, 20);
+
+    /* Pause button – top right corner, clickable */
+    ctx.fillStyle = paused ? "#444" : "#1a1a1a";
+    ctx.fillRect(W - 38, 5, 30, 18);
+    ctx.fillStyle = paused ? "#ccc" : "#555";
+    ctx.font = "10px monospace";
+    ctx.fillText(paused ? "GO" : "II", W - 30, 18);
 
     if (paused) {
         ctx.fillStyle = "#666";
@@ -622,6 +631,18 @@ function draw() {
         ctx.fillStyle = "#555";
         ctx.fillText(">", bx + bsz * 2 + 10, by + bsz + 24);
     }
+
+    /* ---- PAUSE OVERLAY ---- */
+    if (paused && screen === SC_PLAY) {
+        ctx.fillStyle = "#000";
+        for (var pi = OY; pi < H; pi += 2) {
+            ctx.fillRect(0, pi, W, 1);
+        }
+        centered("PAUSED", (H + OY) >> 1, 20, "#aaa");
+        centered("P = RESUME", ((H + OY) >> 1) + 24, 12, "#555");
+    }
+
+    /* ---- DEATH SCREEN ---- */
     if (screen === SC_DEAD) {
         /* Dark overlay – draw manually without alpha */
         /* Stripe every 2 rows to fake semi-dark overlay, lightweight */
