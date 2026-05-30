@@ -128,7 +128,7 @@ Add screenshots here later.
 
 Manan
 
-GitHub: https://github.com/YOUR_USERNAME
+GitHub: https://github.com/pahujamanan2011-hue
 
 ## License
 
