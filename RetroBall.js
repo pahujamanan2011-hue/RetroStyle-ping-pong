@@ -11,14 +11,14 @@
 "use strict";
 
 /* ---------------------------------------------------------
-   CANVAS  (created dynamically so the page stays clean)
+   CANVAS
 --------------------------------------------------------- */
 
 var canvas = document.getElementById("pong");
 var ctx    = canvas.getContext("2d", { alpha: false });
 
-var W = canvas.width;   /* 640 */
-var H = canvas.height;  /* 360 */
+var W = canvas.width;
+var H = canvas.height;
 
 ctx.imageSmoothingEnabled = false;
 
@@ -34,9 +34,9 @@ var PLAYER_X   = 14;
 var CPU_X      = W - 20;
 
 var DIFFICULTY = [
-    { name: "EASY",   speed: 2, mistake: 0.12 },
-    { name: "MEDIUM", speed: 3, mistake: 0.05 },
-    { name: "HARD",   speed: 4, mistake: 0.01 }
+    { name: "EASY",   speed: 2, mistake: 0.35, deadzone: 18, ballspeed: 3 },
+    { name: "MEDIUM", speed: 3, mistake: 0.18, deadzone: 8,  ballspeed: 4 },
+    { name: "HARD",   speed: 4, mistake: 0.05, deadzone: 2,  ballspeed: 5 }
 ];
 
 /* ---------------------------------------------------------
@@ -48,7 +48,7 @@ var SCREEN_HELP = 1;
 var SCREEN_PLAY = 2;
 
 var screen     = SCREEN_MENU;
-var difficulty = 1;   /* default MEDIUM */
+var difficulty = 1;
 var paused     = false;
 var gameOver   = false;
 
@@ -58,14 +58,12 @@ var gameOver   = false;
 
 var playerScore = 0;
 var cpuScore    = 0;
-
 var playerY = (H >> 1) - (PADDLE_H >> 1);
 var cpuY    = (H >> 1) - (PADDLE_H >> 1);
-
 var ballX = W >> 1;
 var ballY = H >> 1;
-var ballVX = 6;
-var ballVY = 3;
+var ballVX = 4;
+var ballVY = 2;
 
 /* ---------------------------------------------------------
    INPUT  – prevent default on arrow keys to stop page scroll
@@ -88,50 +86,35 @@ document.addEventListener("keydown", function (e) {
     if (k === "ArrowUp"   || k === "KeyW") { up   = 1; return; }
     if (k === "ArrowDown" || k === "KeyS") { down = 1; return; }
 
-    /* P = pause (only in game) */
     if (k === "KeyP" && screen === SCREEN_PLAY && !gameOver) {
         paused = !paused;
         return;
     }
 
-    /* F = toggle fullscreen */
     if (k === "KeyF") {
         toggleFullscreen();
         return;
     }
 
-    /* Escape = exit fullscreen */
-    if (k === "Escape") {
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
-        }
-        return;
-    }
+    /* Escape is handled by browser for fullscreen exit automatically */
 
-    /* Enter / Space advance screens */
     if (k === "Enter" || k === "Space") {
 
         if (screen === SCREEN_MENU) {
-            /* Enter on menu handled by mouse; but keyboard works too.
-               We treat Enter as "Start Game" */
             startGame();
             return;
         }
-
         if (screen === SCREEN_HELP) {
             screen = SCREEN_MENU;
             return;
         }
-
         if (screen === SCREEN_PLAY && gameOver) {
             restartGame();
             return;
         }
-
         return;
     }
 
-    /* D = cycle difficulty (on menu only) */
     if (k === "KeyD" && screen === SCREEN_MENU) {
         difficulty = (difficulty + 1) % 3;
         return;
@@ -147,7 +130,6 @@ document.addEventListener("keyup", function (e) {
 
 /* ---------------------------------------------------------
    MOUSE – menu button clicks
-   We track click position relative to canvas
 --------------------------------------------------------- */
 
 canvas.addEventListener("click", function (e) {
@@ -159,37 +141,30 @@ canvas.addEventListener("click", function (e) {
     var my = (e.clientY - rect.top)  * scaleY;
 
     if (screen === SCREEN_MENU) {
-
-        /* START button  220..420  y 155..185 */
+        /* START button */
         if (mx >= 220 && mx <= 420 && my >= 155 && my <= 185) {
-            startGame();
-            return;
+            startGame(); return;
         }
-
-        /* HELP button   220..420  y 200..230 */
+        /* HELP button */
         if (mx >= 220 && mx <= 420 && my >= 200 && my <= 230) {
-            screen = SCREEN_HELP;
-            return;
+            screen = SCREEN_HELP; return;
         }
-
-        /* Difficulty buttons */
-        /* EASY   130..230  y 270..295 */
+        /* EASY */
         if (mx >= 130 && mx <= 230 && my >= 270 && my <= 295) {
             difficulty = 0; return;
         }
-        /* MEDIUM 260..380  y 270..295 */
+        /* MEDIUM */
         if (mx >= 260 && mx <= 380 && my >= 270 && my <= 295) {
             difficulty = 1; return;
         }
-        /* HARD   410..510  y 270..295 */
+        /* HARD */
         if (mx >= 410 && mx <= 510 && my >= 270 && my <= 295) {
             difficulty = 2; return;
         }
     }
 
     if (screen === SCREEN_HELP) {
-        screen = SCREEN_MENU;
-        return;
+        screen = SCREEN_MENU; return;
     }
 });
 
@@ -199,9 +174,9 @@ canvas.addEventListener("click", function (e) {
 
 function toggleFullscreen() {
     if (!document.fullscreenElement) {
-        canvas.requestFullscreen && canvas.requestFullscreen();
+        if (canvas.requestFullscreen) canvas.requestFullscreen();
     } else {
-        document.exitFullscreen && document.exitFullscreen();
+        if (document.exitFullscreen) document.exitFullscreen();
     }
 }
 
@@ -223,7 +198,8 @@ function startGame() {
 function resetBall() {
     ballX  = W >> 1;
     ballY  = H >> 1;
-    ballVX = (Math.random() < 0.5) ? 4 : -4;
+    var spd = DIFFICULTY[difficulty].ballspeed;
+    ballVX = (Math.random() < 0.5) ? spd : -spd;
     ballVY = ((Math.random() * 4) | 0) - 2;
     if (ballVY === 0) ballVY = 1;
 }
@@ -246,15 +222,15 @@ function update() {
 
     /* PLAYER */
     playerY += (down - up) * 5;
-    if (playerY < 0)             playerY = 0;
-    if (playerY > H - PADDLE_H)  playerY = H - PADDLE_H;
+    if (playerY < 0)            playerY = 0;
+    if (playerY > H - PADDLE_H) playerY = H - PADDLE_H;
 
-    /* CPU AI */
-    var ai = DIFFICULTY[difficulty];
+    /* CPU AI – deadzone stops perfect tracking; mistake skips reaction entirely */
+    var ai  = DIFFICULTY[difficulty];
+    var mid = cpuY + (PADDLE_H >> 1);
     if (Math.random() > ai.mistake) {
-        var mid = cpuY + (PADDLE_H >> 1);
-        if (mid < ballY) cpuY += ai.speed;
-        else if (mid > ballY) cpuY -= ai.speed;
+        if (mid < ballY - ai.deadzone) cpuY += ai.speed;
+        else if (mid > ballY + ai.deadzone) cpuY -= ai.speed;
     }
     if (cpuY < 0)            cpuY = 0;
     if (cpuY > H - PADDLE_H) cpuY = H - PADDLE_H;
@@ -263,13 +239,13 @@ function update() {
     ballX += ballVX;
     ballY += ballVY;
 
-    /* WALL BOUNCE */
+    /* WALL BOUNCE – use abs() to guarantee correct direction, fixes vibration */
     if (ballY <= 0) {
         ballY  = 0;
-        ballVY = Math.abs(ballVY);   /* always bounce down */
+        ballVY = Math.abs(ballVY);
     } else if (ballY >= H - BALL_SIZE) {
         ballY  = H - BALL_SIZE;
-        ballVY = -Math.abs(ballVY);  /* always bounce up */
+        ballVY = -Math.abs(ballVY);
     }
 
     /* PLAYER PADDLE COLLISION */
@@ -280,9 +256,7 @@ function update() {
         ballY             <= playerY + PADDLE_H) {
 
         ballX  = PLAYER_X + PADDLE_W + 1;
-        ballVX = 4;
-
-        /* Angle based on hit position, clamped to avoid vibration */
+        ballVX = DIFFICULTY[difficulty].ballspeed;
         ballVY = ((ballY - (playerY + (PADDLE_H >> 1))) / 10) | 0;
         if (ballVY === 0) ballVY = (Math.random() < 0.5) ? 1 : -1;
     }
@@ -295,8 +269,7 @@ function update() {
              ballY             <= cpuY + PADDLE_H) {
 
         ballX  = CPU_X - BALL_SIZE - 1;
-        ballVX = -4;
-
+        ballVX = -DIFFICULTY[difficulty].ballspeed;
         ballVY = ((ballY - (cpuY + (PADDLE_H >> 1))) / 10) | 0;
         if (ballVY === 0) ballVY = (Math.random() < 0.5) ? 1 : -1;
     }
@@ -318,7 +291,7 @@ function update() {
 --------------------------------------------------------- */
 
 function fillBtn(x, y, w, h, active) {
-    ctx.fillStyle = active ? "#555" : "#1a1a1a";
+    ctx.fillStyle = active ? "#333" : "#111";
     ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = active ? "#aaa" : "#444";
     ctx.lineWidth = 1;
@@ -337,90 +310,88 @@ function centeredText(txt, y, size) {
 
 function draw() {
 
-    /* CLEAR */
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, W, H);
 
-    /* ---------- MENU SCREEN ---------- */
+    /* ---- MENU ---- */
     if (screen === SCREEN_MENU) {
 
-        ctx.fillStyle = "#aaa";
-        centeredText("TERMINAL ARCADE", 60, 18);
+        ctx.fillStyle = "#666";
+        centeredText("TERMINAL ARCADE", 58, 15);
 
-        ctx.fillStyle = "#fff";
-        centeredText("RETRO BALL", 100, 22);
-
-        /* START button */
-        fillBtn(220, 155, 200, 30, false);
         ctx.fillStyle = "#ccc";
-        ctx.font = "14px monospace";
-        ctx.fillText("START GAME", 268, 176);
+        centeredText("RETRO BALL", 100, 24);
 
-        /* HELP button */
-        fillBtn(220, 200, 200, 30, false);
-        ctx.fillStyle = "#ccc";
+        /* START */
+        fillBtn(220, 150, 200, 32, false);
+        ctx.fillStyle = "#bbb";
         ctx.font = "14px monospace";
-        ctx.fillText("HELP / KEYS", 263, 221);
+        var tw = ctx.measureText("START GAME").width;
+        ctx.fillText("START GAME", 220 + ((200 - tw) >> 1), 172);
+
+        /* HELP */
+        fillBtn(220, 196, 200, 32, false);
+        ctx.fillStyle = "#bbb";
+        tw = ctx.measureText("HELP / KEYS").width;
+        ctx.fillText("HELP / KEYS", 220 + ((200 - tw) >> 1), 218);
 
         /* Difficulty label */
-        ctx.fillStyle = "#777";
+        ctx.fillStyle = "#555";
         ctx.font = "12px monospace";
-        centeredText("SELECT DIFFICULTY:", 260, 12);
+        centeredText("-- SELECT DIFFICULTY --", 258, 12);
 
-        /* 3 difficulty buttons */
+        /* 3 diff buttons */
         var dnames = ["EASY", "MEDIUM", "HARD"];
         var dbx    = [130,    260,      410];
         var dbw    = [100,    120,      100];
-
         for (var i = 0; i < 3; i++) {
-            fillBtn(dbx[i], 270, dbw[i], 25, difficulty === i);
-            ctx.fillStyle = difficulty === i ? "#fff" : "#888";
+            fillBtn(dbx[i], 268, dbw[i], 26, difficulty === i);
+            ctx.fillStyle = difficulty === i ? "#fff" : "#777";
             ctx.font = "12px monospace";
-            var tw = ctx.measureText(dnames[i]).width;
-            ctx.fillText(dnames[i], dbx[i] + ((dbw[i] - tw) >> 1), 288);
+            tw = ctx.measureText(dnames[i]).width;
+            ctx.fillText(dnames[i], dbx[i] + ((dbw[i] - tw) >> 1), 286);
         }
 
-        ctx.fillStyle = "#444";
-        ctx.font = "11px monospace";
-        centeredText("D = CYCLE DIFFICULTY  |  ENTER = START  |  F = FULLSCREEN", 340, 11);
+        ctx.fillStyle = "#333";
+        ctx.font = "10px monospace";
+        centeredText("D = CYCLE DIFFICULTY   ENTER = START   F = FULLSCREEN", 340, 10);
 
         return;
     }
 
-    /* ---------- HELP SCREEN ---------- */
+    /* ---- HELP ---- */
     if (screen === SCREEN_HELP) {
 
         ctx.fillStyle = "#aaa";
-        centeredText("CONTROLS", 50, 16);
-
-        ctx.fillStyle = "#888";
-        ctx.font = "13px monospace";
+        centeredText("-- CONTROLS --", 50, 15);
 
         var lines = [
-            "W / UP ARROW   - Move paddle up",
-            "S / DOWN ARROW - Move paddle down",
-            "P              - Pause / Resume",
-            "F              - Toggle fullscreen",
-            "ESC            - Exit fullscreen",
-            "D              - Change difficulty (menu)",
-            "ENTER          - Start / Restart"
+            "W / UP ARROW    Move paddle up",
+            "S / DOWN ARROW  Move paddle down",
+            "P               Pause / Resume",
+            "F               Toggle fullscreen",
+            "ESC             Exit fullscreen",
+            "D               Cycle difficulty (menu)",
+            "ENTER / SPACE   Start / Restart"
         ];
 
-        for (var i = 0; i < lines.length; i++) {
-            var tw = ctx.measureText(lines[i]).width;
-            ctx.fillText(lines[i], (W - tw) >> 1, 90 + i * 26);
+        ctx.fillStyle = "#777";
+        ctx.font = "13px monospace";
+        for (var j = 0; j < lines.length; j++) {
+            tw = ctx.measureText(lines[j]).width;
+            ctx.fillText(lines[j], (W - tw) >> 1, 90 + j * 27);
         }
 
-        ctx.fillStyle = "#555";
-        centeredText("CLICK OR ENTER TO GO BACK", 330, 12);
+        ctx.fillStyle = "#444";
+        centeredText("CLICK OR PRESS ENTER TO GO BACK", 330, 11);
 
         return;
     }
 
-    /* ---------- PLAY SCREEN ---------- */
+    /* ---- PLAY ---- */
 
-    /* Center dashed line */
-    ctx.fillStyle = "#222";
+    /* Center dashes */
+    ctx.fillStyle = "#1e1e1e";
     for (var y = 0; y < H; y += 18) {
         ctx.fillRect((W >> 1) - 1, y, 2, 10);
     }
@@ -437,45 +408,43 @@ function draw() {
     /* Score */
     ctx.fillStyle = "#aaa";
     ctx.font = "16px monospace";
-    ctx.fillText(playerScore, 140, 25);
-    ctx.fillText(cpuScore,    W - 150, 25);
+    ctx.fillText(playerScore, 140, 26);
+    ctx.fillText(cpuScore,    W - 155, 26);
 
-    /* Difficulty label top center */
-    ctx.fillStyle = "#444";
+    /* Difficulty top-center */
+    ctx.fillStyle = "#333";
     ctx.font = "11px monospace";
-    var dlabel = DIFFICULTY[difficulty].name;
-    var dtw = ctx.measureText(dlabel).width;
-    ctx.fillText(dlabel, (W - dtw) >> 1, 20);
+    tw = ctx.measureText(DIFFICULTY[difficulty].name).width;
+    ctx.fillText(DIFFICULTY[difficulty].name, (W - tw) >> 1, 20);
 
-    /* PAUSED overlay */
+    /* PAUSED */
     if (paused) {
-        ctx.fillStyle = "rgba(0,0,0,0.55)";
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
         ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = "#aaa";
-        centeredText("PAUSED", 175, 20);
+        centeredText("PAUSED", 170, 20);
         ctx.fillStyle = "#555";
-        centeredText("PRESS P TO RESUME", 210, 13);
+        centeredText("P = RESUME", 200, 13);
     }
 
-    /* GAME OVER overlay */
+    /* GAME OVER */
     if (gameOver) {
-        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
         ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = "#fff";
-        centeredText(playerScore > cpuScore ? "YOU WIN!" : "CPU WINS", 145, 18);
+        centeredText(playerScore > cpuScore ? "YOU WIN!" : "CPU WINS", 145, 20);
         ctx.fillStyle = "#aaa";
         centeredText(playerScore + "  -  " + cpuScore, 180, 16);
-        ctx.fillStyle = "#666";
-        centeredText("PRESS ENTER TO PLAY AGAIN", 230, 13);
-        centeredText("CLICK RETRO BALL TO RETURN TO MENU", 255, 11);
+        ctx.fillStyle = "#555";
+        centeredText("ENTER = PLAY AGAIN", 225, 13);
     }
 }
 
 /* ---------------------------------------------------------
-   MAIN LOOP  – fixed ~30 FPS, ultra-lightweight
+   MAIN LOOP – fixed ~30 FPS
 --------------------------------------------------------- */
 
-setInterval(function () {
+window.__gameInterval = setInterval(function () {
     update();
     draw();
 }, 33);
