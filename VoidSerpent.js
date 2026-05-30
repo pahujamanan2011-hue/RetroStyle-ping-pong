@@ -17,7 +17,12 @@ var W = canvas.width;   /* 640 */
 var H = canvas.height;  /* 360 */
 
 ctx.imageSmoothingEnabled = false;
-
+function requestLandscape() {
+    if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock("landscape")
+        .catch(function(){});
+    }
+}
 /* ---------------------------------------------------------
    GRID
 --------------------------------------------------------- */
@@ -77,7 +82,7 @@ var foodBlink = 0;
 */
 var pu         = null;   /* {x,y,type,ticks}  active power-up on grid */
 var puTimer    = 0;      /* countdown ticks while pu is on screen      */
-var PU_TICKS   = 270;    /* 5 seconds at 30fps                         */
+var PU_TICKS   = 210;    /* 5 seconds at 30fps                         */
 var puSpawnAt  = 5;      /* score threshold to spawn next power-up     */
 var puBlink    = 0;
 
