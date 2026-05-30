@@ -33,6 +33,15 @@
             </div>
         </div>
 
+        <div class="game-card" onclick="launchGame('VoidSerpent.js')">
+            <img src="VoidSerpent.png" alt="Void Serpent">
+            <div class="game-info">
+                <h3>VOID SERPENT</h3>
+                <p>Terminal snake survival system.</p>
+                <p class="hint">Click to play &bull; WASD / Arrows &bull; P = pause</p>
+            </div>
+        </div>
+
     </div>
 
     <!-- STATUS LINE -->
@@ -40,19 +49,19 @@
         <span id="status-msg">> No game loaded.</span>
     </div>
 
+    <!-- FOOTER -->
+    <div id="footer">
+        <span>Manan Pahuja &nbsp;&bull;&nbsp; pahujamanan2011@gmail.com</span>
+    </div>
 
-<!-- FOOTER -->
-<div id="footer">
-
-    <p>> Created by Manan Pahuja</p>
-
-    <p>> pahujamanan2011@gmail.com</p>
-
-</div>
 </div>
 
 <!-- FULLSCREEN OVERLAY – hidden until a game is launched -->
 <div id="overlay" style="display:none;">
+    <div id="overlay-topbar">
+        <button id="back-btn" onclick="goBack()">&#8592; BACK</button>
+        <span id="overlay-title">TERMINAL ARCADE</span>
+    </div>
     <canvas id="pong" width="640" height="360"></canvas>
     <div id="overlay-hint">ESC or F = exit fullscreen &nbsp;|&nbsp; P = pause</div>
 </div>
@@ -60,20 +69,44 @@
 <script>
 
 var currentScript = null;
+var currentInterval = null;
 
-function launchGame(file) {
+function goBack() {
+    /* Hide overlay */
+    document.getElementById("overlay").style.display = "none";
 
-    /* Show overlay canvas */
-    var overlay = document.getElementById("overlay");
-    overlay.style.display = "flex";
+    /* Stop game loop if exposed */
+    if (window.__gameInterval) {
+        clearInterval(window.__gameInterval);
+        window.__gameInterval = null;
+    }
 
-    /* Remove previous game script */
+    /* Remove game script */
     if (currentScript) {
         currentScript.remove();
         currentScript = null;
     }
 
-    /* Reset canvas so the new game gets a clean state */
+    document.getElementById("status-msg").textContent = "> No game loaded.";
+}
+
+function launchGame(file) {
+
+    var overlay = document.getElementById("overlay");
+    overlay.style.display = "flex";
+
+    /* Stop previous game loop */
+    if (window.__gameInterval) {
+        clearInterval(window.__gameInterval);
+        window.__gameInterval = null;
+    }
+
+    if (currentScript) {
+        currentScript.remove();
+        currentScript = null;
+    }
+
+    /* Fresh canvas */
     var oldCanvas = document.getElementById("pong");
     var newCanvas = document.createElement("canvas");
     newCanvas.id     = "pong";
@@ -81,14 +114,17 @@ function launchGame(file) {
     newCanvas.height = 360;
     oldCanvas.parentNode.replaceChild(newCanvas, oldCanvas);
 
-    /* Load game script */
-    var script   = document.createElement("script");
-    script.src   = file;
-    script.id    = "game-script";
+    /* Update overlay title */
+    document.getElementById("overlay-title").textContent =
+        file.replace(".js", "").toUpperCase();
+
+    /* Load script */
+    var script = document.createElement("script");
+    script.src = file;
+    script.id  = "game-script";
     currentScript = script;
     document.body.appendChild(script);
 
-    /* Update status bar */
     document.getElementById("status-msg").textContent =
         "> Running: " + file + "   [F = fullscreen  P = pause  ESC = exit fullscreen]";
 }
