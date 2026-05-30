@@ -27,19 +27,9 @@ This is an **AI-assisted project**, built by [Manan Pahuja](https://github.com/m
 - Sound toggle and difficulty toggle
 - Zero dependencies — pure HTML5 + CSS + Vanilla JS
 
----
 
-## 🗂️ File Structure
 
-```
-retro-pong/
-├── index.html      # App window shell, layout, menus
-├── style.css       # Retro dark UI styling
-├── game.js         # All game logic, physics, AI, audio, rendering
-└── README.md       # You are here
-```
 
----
 
 ## 🚀 Getting Started
 
