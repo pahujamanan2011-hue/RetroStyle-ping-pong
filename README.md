@@ -27,31 +27,6 @@ This is an **AI-assisted project**, built by [Manan Pahuja](https://github.com/m
 - Sound toggle and difficulty toggle
 - Zero dependencies — pure HTML5 + CSS + Vanilla JS
 
-
-
-
-
-## 🚀 Getting Started
-
-No build step. No install. No server required.
-
-```bash
-# Clone the repo
-git clone https://github.com/mananpahuja/retro-pong.git
-
-# Enter the folder
-cd retro-pong
-
-# Open in your browser
-firefox index.html
-# or
-chromium index.html
-```
-
-Works on any modern browser. Optimised for **Firefox and Chromium on Linux**.
-
----
-
 ## 🎮 Controls
 
 | Key | Action |
