@@ -76,6 +76,15 @@ html, body {
     color: #444;
 }
 
+/* FOOTER */
+#footer {
+    padding: 6px 14px;
+    border-top: 1px solid #111;
+    font-size: 11px;
+    color: #333;
+    text-align: right;
+}
+
 /* FULLSCREEN OVERLAY */
 #overlay {
     position: fixed;
@@ -87,6 +96,32 @@ html, body {
     align-items: center;
     justify-content: center;
     z-index: 999;
+}
+
+/* OVERLAY TOP BAR */
+#overlay-topbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+    width: 640px;
+    max-width: 100%;
+}
+
+#back-btn {
+    background: #111;
+    border: 1px solid #333;
+    color: #aaa;
+    font-family: monospace;
+    font-size: 12px;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+#back-btn:hover { background: #1e1e1e; border-color: #666; color: #fff; }
+
+#overlay-title {
+    font-size: 13px;
+    color: #444;
 }
 
 #overlay canvas {
@@ -109,25 +144,4 @@ html, body {
 canvas {
     image-rendering: pixelated;
     background: #000;
-}
-/* FOOTER */
-
-#footer {
-
-    border-top: 1px solid #222;
-
-    padding: 10px;
-
-    color: #555;
-
-    font-size: 12px;
-
-    background: #080808;
-
-}
-
-#footer p {
-
-    margin: 4px 0;
-
 }
