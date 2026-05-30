@@ -26,7 +26,7 @@ ctx.imageSmoothingEnabled = false;
    SETTINGS
 --------------------------------------------------------- */
 
-var WIN_SCORE  = 10;
+var WIN_SCORE  = 5;
 var BALL_SIZE  = 8;
 var PADDLE_W   = 6;
 var PADDLE_H   = 70;
@@ -34,8 +34,8 @@ var PLAYER_X   = 14;
 var CPU_X      = W - 20;
 
 var DIFFICULTY = [
-    { name: "EASY",   speed: 2, mistake: 0.35, deadzone: 18, ballspeed: 3 },
-    { name: "MEDIUM", speed: 3, mistake: 0.18, deadzone: 8,  ballspeed: 4 },
+    { name: "EASY",   speed: 1, mistake: 0.55, deadzone: 30, ballspeed: 3 },
+    { name: "MEDIUM", speed: 2, mistake: 0.30, deadzone: 14, ballspeed: 4 },
     { name: "HARD",   speed: 4, mistake: 0.05, deadzone: 2,  ballspeed: 5 }
 ];
 
@@ -166,7 +166,59 @@ canvas.addEventListener("click", function (e) {
     if (screen === SCREEN_HELP) {
         screen = SCREEN_MENU; return;
     }
+
+    /* Pause button tap during play */
+    if (screen === SCREEN_PLAY && !gameOver) {
+        if (mx >= W - 36 && mx <= W - 8 && my >= 6 && my <= 24) {
+            paused = !paused; return;
+        }
+    }
 });
+
+/* ---------------------------------------------------------
+   TOUCH – drag finger up/down to move paddle
+--------------------------------------------------------- */
+
+var touchLastY = -1;
+
+canvas.addEventListener("touchstart", function (e) {
+    e.preventDefault();
+    touchLastY = e.touches[0].clientY;
+}, { passive: false });
+
+canvas.addEventListener("touchmove", function (e) {
+    e.preventDefault();
+    if (touchLastY < 0) return;
+    var dy = e.touches[0].clientY - touchLastY;
+    touchLastY = e.touches[0].clientY;
+    /* Scale touch delta to canvas coords */
+    var rect = canvas.getBoundingClientRect();
+    var scale = H / rect.height;
+    playerY += (dy * scale) | 0;
+    if (playerY < 0)            playerY = 0;
+    if (playerY > H - PADDLE_H) playerY = H - PADDLE_H;
+}, { passive: false });
+
+canvas.addEventListener("touchend", function (e) {
+    e.preventDefault();
+    touchLastY = -1;
+    /* Tap to start / restart / pause */
+    var rect = canvas.getBoundingClientRect();
+    var scaleX = W / rect.width;
+    var scaleY = H / rect.height;
+    var tx = (e.changedTouches[0].clientX - rect.left) * scaleX;
+    var ty = (e.changedTouches[0].clientY - rect.top)  * scaleY;
+    if (screen === SCREEN_MENU) {
+        if (tx >= 220 && tx <= 420 && ty >= 155 && ty <= 185) { startGame(); return; }
+        if (tx >= 220 && tx <= 420 && ty >= 200 && ty <= 230) { screen = SCREEN_HELP; return; }
+        if (tx >= 130 && tx <= 230 && ty >= 270 && ty <= 295) { difficulty = 0; return; }
+        if (tx >= 260 && tx <= 380 && ty >= 270 && ty <= 295) { difficulty = 1; return; }
+        if (tx >= 410 && tx <= 510 && ty >= 270 && ty <= 295) { difficulty = 2; return; }
+    }
+    if (screen === SCREEN_HELP)  { screen = SCREEN_MENU; return; }
+    if (screen === SCREEN_PLAY && !gameOver) { paused = !paused; return; }
+    if (screen === SCREEN_PLAY &&  gameOver) { restartGame(); return; }
+}, { passive: false });
 
 /* ---------------------------------------------------------
    FULLSCREEN
@@ -416,6 +468,13 @@ function draw() {
     ctx.font = "11px monospace";
     tw = ctx.measureText(DIFFICULTY[difficulty].name).width;
     ctx.fillText(DIFFICULTY[difficulty].name, (W - tw) >> 1, 20);
+
+    /* Pause button – top right, tap-friendly for mobile */
+    ctx.fillStyle = paused ? "#555" : "#222";
+    ctx.fillRect(W - 36, 6, 28, 18);
+    ctx.fillStyle = paused ? "#ccc" : "#666";
+    ctx.font = "10px monospace";
+    ctx.fillText(paused ? "PLAY" : "II", W - 30, 19);
 
     /* PAUSED */
     if (paused) {
