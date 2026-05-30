@@ -77,7 +77,7 @@ var foodBlink = 0;
 */
 var pu          = null;   /* {x,y,type} active power-up on grid */
 var puTimer     = 0;      /* ticks remaining before PU disappears from grid */
-var PU_TICKS    = 150;    /* 5 seconds on screen at 30fps */
+var PU_TICKS    = 210;    /* 7 seconds on screen at 30fps */
 var puBlink     = 0;
 
 /* Bonus PU: track apples eaten */
@@ -599,32 +599,29 @@ function draw() {
         }
     }
 
-    /* ---- MOBILE D-PAD ---- */
-    /* Only draw if touch device likely – always draw, lightweight */
-    var bsz = 36;   /* button size */
-    var bx  = W - 130;
-    var by  = H - 120;
-    /* UP */
-    ctx.fillStyle = "#1a1a1a";
-    ctx.fillRect(bx + bsz, by, bsz, bsz);
-    ctx.fillStyle = "#555";
-    ctx.font = "14px monospace";
-    ctx.fillText("^", bx + bsz + 12, by + 24);
-    /* DOWN */
-    ctx.fillStyle = "#1a1a1a";
-    ctx.fillRect(bx + bsz, by + bsz * 2, bsz, bsz);
-    ctx.fillStyle = "#555";
-    ctx.fillText("v", bx + bsz + 12, by + bsz * 2 + 24);
-    /* LEFT */
-    ctx.fillStyle = "#1a1a1a";
-    ctx.fillRect(bx, by + bsz, bsz, bsz);
-    ctx.fillStyle = "#555";
-    ctx.fillText("<", bx + 10, by + bsz + 24);
-    /* RIGHT */
-    ctx.fillStyle = "#1a1a1a";
-    ctx.fillRect(bx + bsz * 2, by + bsz, bsz, bsz);
-    ctx.fillStyle = "#555";
-    ctx.fillText(">", bx + bsz * 2 + 10, by + bsz + 24);
+    /* ---- MOBILE D-PAD – only on touch devices ---- */
+    if (window.matchMedia("(pointer: coarse)").matches) {
+        var bsz = 36;
+        var bx  = W - 130;
+        var by  = H - 120;
+        ctx.fillStyle = "#1a1a1a";
+        ctx.fillRect(bx + bsz, by, bsz, bsz);
+        ctx.fillStyle = "#555";
+        ctx.font = "14px monospace";
+        ctx.fillText("^", bx + bsz + 12, by + 24);
+        ctx.fillStyle = "#1a1a1a";
+        ctx.fillRect(bx + bsz, by + bsz * 2, bsz, bsz);
+        ctx.fillStyle = "#555";
+        ctx.fillText("v", bx + bsz + 12, by + bsz * 2 + 24);
+        ctx.fillStyle = "#1a1a1a";
+        ctx.fillRect(bx, by + bsz, bsz, bsz);
+        ctx.fillStyle = "#555";
+        ctx.fillText("<", bx + 10, by + bsz + 24);
+        ctx.fillStyle = "#1a1a1a";
+        ctx.fillRect(bx + bsz * 2, by + bsz, bsz, bsz);
+        ctx.fillStyle = "#555";
+        ctx.fillText(">", bx + bsz * 2 + 10, by + bsz + 24);
+    }
     if (screen === SC_DEAD) {
         /* Dark overlay – draw manually without alpha */
         /* Stripe every 2 rows to fake semi-dark overlay, lightweight */
