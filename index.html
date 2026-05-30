@@ -71,22 +71,23 @@
 var currentScript = null;
 var currentInterval = null;
 
-function goBack() {
-    /* Hide overlay */
-    document.getElementById("overlay").style.display = "none";
+function requestLandscape() {
+    if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock("landscape")
+        .catch(function(){});
+    }
+}
 
-    /* Stop game loop if exposed */
+function goBack() {
+    document.getElementById("overlay").style.display = "none";
     if (window.__gameInterval) {
         clearInterval(window.__gameInterval);
         window.__gameInterval = null;
     }
-
-    /* Remove game script */
     if (currentScript) {
         currentScript.remove();
         currentScript = null;
     }
-
     document.getElementById("status-msg").textContent = "> No game loaded.";
 }
 
@@ -95,18 +96,18 @@ function launchGame(file) {
     var overlay = document.getElementById("overlay");
     overlay.style.display = "flex";
 
-    /* Stop previous game loop */
+    /* Request landscape on mobile */
+    requestLandscape();
+
     if (window.__gameInterval) {
         clearInterval(window.__gameInterval);
         window.__gameInterval = null;
     }
-
     if (currentScript) {
         currentScript.remove();
         currentScript = null;
     }
 
-    /* Fresh canvas */
     var oldCanvas = document.getElementById("pong");
     var newCanvas = document.createElement("canvas");
     newCanvas.id     = "pong";
@@ -114,11 +115,9 @@ function launchGame(file) {
     newCanvas.height = 360;
     oldCanvas.parentNode.replaceChild(newCanvas, oldCanvas);
 
-    /* Update overlay title */
     document.getElementById("overlay-title").textContent =
         file.replace(".js", "").toUpperCase();
 
-    /* Load script */
     var script = document.createElement("script");
     script.src = file;
     script.id  = "game-script";
