@@ -17,12 +17,7 @@ var W = canvas.width;   /* 640 */
 var H = canvas.height;  /* 360 */
 
 ctx.imageSmoothingEnabled = false;
-function requestLandscape() {
-    if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock("landscape")
-        .catch(function(){});
-    }
-}
+
 /* ---------------------------------------------------------
    GRID
 --------------------------------------------------------- */
@@ -77,19 +72,27 @@ var TONGUE_TICKS = 6;
 var foodBlink = 0;
 
 /* power-ups
-   type 1 = BONUS  – collect for time-based bonus points (no grow)
-   type 2 = DOUBLE – next N apples give 2 pts each (no grow)
+   type 1 = BONUS  – appears every 5 apples, collect for time-based bonus pts (no grow)
+   type 2 = DOUBLE – appears every 30 seconds, doubles score for 10 seconds, snake grows normally
 */
-var pu         = null;   /* {x,y,type,ticks}  active power-up on grid */
-var puTimer    = 0;      /* countdown ticks while pu is on screen      */
-var PU_TICKS   = 210;    /* 5 seconds at 30fps                         */
-var puSpawnAt  = 5;      /* score threshold to spawn next power-up     */
-var puBlink    = 0;
+var pu          = null;   /* {x,y,type} active power-up on grid */
+var puTimer     = 0;      /* ticks remaining before PU disappears from grid */
+var PU_TICKS    = 150;    /* 5 seconds on screen at 30fps */
+var puBlink     = 0;
 
-/* active effects */
-var doubleActive = false;   /* double-score mode on         */
-var doubleMoves  = 0;       /* apples left in double mode   */
-var DOUBLE_COUNT = 5;       /* apples to double             */
+/* Bonus PU: track apples eaten */
+var applesEaten  = 0;     /* total apples eaten this game */
+var bonusEvery   = 5;     /* spawn bonus PU every N apples */
+var nextBonusAt  = 5;     /* next apple count to spawn bonus */
+
+/* Double PU: time-based spawn every 30 seconds */
+var doublePuClock  = 0;       /* ticks since last double PU (or game start) */
+var DOUBLE_PU_EVERY = 900;    /* 30 seconds at 30fps */
+
+/* active double-score effect */
+var doubleActive  = false;
+var doubleTicks   = 0;        /* ticks remaining for double effect */
+var DOUBLE_EFFECT = 300;      /* 10 seconds at 30fps */
 
 /* speed: ticks per move (lower = faster) */
 var BASE_SPEED  = 8;    /* ~3.75 moves/sec at 30fps */
@@ -113,12 +116,14 @@ function initGame() {
     moveTick = 0;
     tongueTimer  = 0;
     tongueOn     = false;
-    pu           = null;
-    puTimer      = 0;
-    puSpawnAt    = 5;
-    puBlink      = 0;
-    doubleActive = false;
-    doubleMoves  = 0;
+    pu            = null;
+    puTimer       = 0;
+    puBlink       = 0;
+    applesEaten   = 0;
+    nextBonusAt   = 5;
+    doublePuClock = 0;
+    doubleActive  = false;
+    doubleTicks   = 0;
     spawnFood();
 }
 
@@ -136,9 +141,10 @@ function spawnFood() {
     foodBlink = 0;
 }
 
-function spawnPowerUp() {
+function spawnPowerUp(type) {
+    /* Don't spawn if one already on screen */
+    if (pu) return;
     var px, py, blocked;
-    var type = (Math.random() < 0.5) ? 1 : 2;  /* 1=bonus 2=double */
     do {
         px = (Math.random() * COLS) | 0;
         py = (Math.random() * ROWS) | 0;
@@ -237,21 +243,46 @@ canvas.addEventListener("touchend", function (e) {
     var adx = dx < 0 ? -dx : dx;
     var ady = dy < 0 ? -dy : dy;
 
+    var rect = canvas.getBoundingClientRect();
+    var scaleX = W / rect.width;
+    var scaleY = H / rect.height;
+    var tx = (e.changedTouches[0].clientX - rect.left) * scaleX;
+    var ty = (e.changedTouches[0].clientY - rect.top)  * scaleY;
+
     if (screen === SC_MENU || screen === SC_DEAD) {
+        if (typeof requestLandscape === "function") requestLandscape();
         initGame(); screen = SC_PLAY; return;
     }
 
     if (screen !== SC_PLAY) return;
 
-    /* Minimum swipe distance */
-    if (adx < 10 && ady < 10) return;
+    /* Check D-pad tap first */
+    var bsz = 36;
+    var bx  = W - 130;
+    var by  = H - 120;
+    /* UP */
+    if (tx >= bx+bsz && tx <= bx+bsz*2 && ty >= by && ty <= by+bsz) {
+        if (dir.y === 0) { nextDir = {x:0, y:-1}; } return;
+    }
+    /* DOWN */
+    if (tx >= bx+bsz && tx <= bx+bsz*2 && ty >= by+bsz*2 && ty <= by+bsz*3) {
+        if (dir.y === 0) { nextDir = {x:0, y:1}; } return;
+    }
+    /* LEFT */
+    if (tx >= bx && tx <= bx+bsz && ty >= by+bsz && ty <= by+bsz*2) {
+        if (dir.x === 0) { nextDir = {x:-1, y:0}; } return;
+    }
+    /* RIGHT */
+    if (tx >= bx+bsz*2 && tx <= bx+bsz*3 && ty >= by+bsz && ty <= by+bsz*2) {
+        if (dir.x === 0) { nextDir = {x:1, y:0}; } return;
+    }
 
+    /* Swipe fallback (minimum distance) */
+    if (adx < 10 && ady < 10) return;
     if (adx > ady) {
-        /* Horizontal swipe */
         if (dx > 0 && dir.x === 0) nextDir = {x: 1, y: 0};
         if (dx < 0 && dir.x === 0) nextDir = {x:-1, y: 0};
     } else {
-        /* Vertical swipe */
         if (dy > 0 && dir.y === 0) nextDir = {x: 0, y: 1};
         if (dy < 0 && dir.y === 0) nextDir = {x: 0, y:-1};
     }
@@ -285,6 +316,19 @@ function update() {
         if (puTimer <= 0) { pu = null; }
     }
 
+    /* Double PU clock – spawn type 2 every 30 seconds regardless of score */
+    doublePuClock++;
+    if (doublePuClock >= DOUBLE_PU_EVERY) {
+        doublePuClock = 0;
+        spawnPowerUp(2);
+    }
+
+    /* Double effect countdown */
+    if (doubleActive) {
+        doubleTicks--;
+        if (doubleTicks <= 0) { doubleActive = false; doubleTicks = 0; }
+    }
+
     /* Move on tick */
     moveTick++;
     if (moveTick < speed) return;
@@ -314,45 +358,41 @@ function update() {
 
     /* Eat power-up? */
     if (pu && nx === pu.x && ny === pu.y) {
-        var secsLeft = (puTimer / 30) | 0;  /* seconds remaining 0-5 */
-        if (secsLeft < 1) secsLeft = 1;
-
         if (pu.type === 1) {
-            /* BONUS: 2 pts per second remaining */
+            /* BONUS: 2 pts per second remaining, no growth */
+            var secsLeft = ((puTimer / 30) | 0);
+            if (secsLeft < 1) secsLeft = 1;
             var bonus = secsLeft * 2;
             score += bonus;
             if (score > hiScore) { hiScore = score; newHi = true; saveHi(); }
+            snake.pop(); /* no growth */
         } else {
-            /* DOUBLE: activate double-score mode */
+            /* DOUBLE: activate 10-second double score, snake grows normally */
             doubleActive = true;
-            doubleMoves  = DOUBLE_COUNT;
+            doubleTicks  = DOUBLE_EFFECT;
+            /* snake grows: do NOT pop tail */
         }
         pu = null;
-        snake.pop();   /* no growth */
         return;
     }
 
     /* Eat food? */
     if (nx === food.x && ny === food.y) {
-        var pts = 1;
-        if (doubleActive) {
-            pts = 2;
-            doubleMoves--;
-            if (doubleMoves <= 0) { doubleActive = false; }
-            snake.pop();   /* no growth in double mode */
-        }
+        /* Snake always grows (tail stays) */
+        applesEaten++;
+        var pts = doubleActive ? 2 : 1;
         score += pts;
         if (score > hiScore) { hiScore = score; newHi = true; saveHi(); }
-        /* Speed up every 5 points, min 3 ticks */
-        if (score % 5 === 0 && speed > 3) speed--;
-        /* Spawn power-up every 5 points */
-        if (score >= puSpawnAt && !pu) {
-            puSpawnAt += 5;
-            spawnPowerUp();
+        /* Speed up every 5 apples, min 3 ticks */
+        if (applesEaten % 5 === 0 && speed > 3) speed--;
+        /* Spawn bonus PU every 5 apples */
+        if (applesEaten >= nextBonusAt) {
+            nextBonusAt += 5;
+            spawnPowerUp(1);
         }
         spawnFood();
     } else {
-        snake.pop();
+        snake.pop(); /* remove tail only when no food eaten */
     }
 }
 
@@ -508,10 +548,10 @@ function draw() {
 
     /* Double-score active indicator */
     if (doubleActive) {
+        var dsec = ((doubleTicks / 30) | 0) + 1;
         ctx.fillStyle = "#00aaaa";
         ctx.font = "9px monospace";
-        var dlbl = "x2 (" + doubleMoves + ")";
-        ctx.fillText(dlbl, W - 60, 32);
+        ctx.fillText("x2 " + dsec + "s", W - 55, 32);
     }
 
     /* ---- SNAKE ---- */
@@ -559,7 +599,32 @@ function draw() {
         }
     }
 
-    /* ---- DEATH SCREEN ---- */
+    /* ---- MOBILE D-PAD ---- */
+    /* Only draw if touch device likely – always draw, lightweight */
+    var bsz = 36;   /* button size */
+    var bx  = W - 130;
+    var by  = H - 120;
+    /* UP */
+    ctx.fillStyle = "#1a1a1a";
+    ctx.fillRect(bx + bsz, by, bsz, bsz);
+    ctx.fillStyle = "#555";
+    ctx.font = "14px monospace";
+    ctx.fillText("^", bx + bsz + 12, by + 24);
+    /* DOWN */
+    ctx.fillStyle = "#1a1a1a";
+    ctx.fillRect(bx + bsz, by + bsz * 2, bsz, bsz);
+    ctx.fillStyle = "#555";
+    ctx.fillText("v", bx + bsz + 12, by + bsz * 2 + 24);
+    /* LEFT */
+    ctx.fillStyle = "#1a1a1a";
+    ctx.fillRect(bx, by + bsz, bsz, bsz);
+    ctx.fillStyle = "#555";
+    ctx.fillText("<", bx + 10, by + bsz + 24);
+    /* RIGHT */
+    ctx.fillStyle = "#1a1a1a";
+    ctx.fillRect(bx + bsz * 2, by + bsz, bsz, bsz);
+    ctx.fillStyle = "#555";
+    ctx.fillText(">", bx + bsz * 2 + 10, by + bsz + 24);
     if (screen === SC_DEAD) {
         /* Dark overlay – draw manually without alpha */
         /* Stripe every 2 rows to fake semi-dark overlay, lightweight */
