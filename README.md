@@ -1,82 +1,135 @@
-# RetroStyle-ping-pong
-# 🕹️ GAME VISUALISER — Retro Pong
+# Terminal Arcade
 
-> A lightweight retro-style Pong game inspired by old 90s desktop game visualizers.  
-> Dark. Minimal. Nostalgic. Built to run on anything.
+A lightweight retro arcade built with HTML, CSS, and JavaScript.
 
----
+Designed to feel like a classic terminal application while running smoothly on old and low-spec computers.
 
-## 📸 About
+## Features
 
-**GAME VISUALISER** is a classic Pong recreation styled after retro utility software from the Windows XP / early Linux era. It features a dark charcoal UI, flat geometry, scanline overlays, and deliberately minimal visuals — designed to feel like something you'd find on a dusty CD-ROM from 2001.
+- Lightweight design
+- Retro terminal aesthetic
+- Linux-friendly
+- No frameworks
+- Canvas-based games
+- Fast startup
+- Low CPU usage
+- Mobile support (where available)
 
-This is an **AI-assisted project**, built by [Manan Pahuja](https://github.com/mananpahuja) in collaboration with **Claude** (by Anthropic). The entire game — logic, visuals, and UI — was designed and generated with the help of Claude AI.
+## Games
 
----
+### Retro Ball
 
-## ✨ Features
+Classic Pong-inspired gameplay.
 
-- Classic Pong gameplay with a circular ball
-- Player vs AI with 3 difficulty levels (Easy / Medium / Hard)
-- Retro dark-gray UI styled like an old desktop utility
-- Lightweight scanline effect (single draw call)
-- Tiny square-wave beep sound effects via Web Audio API
-- FPS-capped game loop — runs smoothly on low-spec hardware
-- Score tracker with win condition (first to 7)
-- Pause menu, Game Over screen, and Main Menu
-- Sound toggle and difficulty toggle
-- Zero dependencies — pure HTML5 + CSS + Vanilla JS
-
-## 🎮 Controls
-
-| Key | Action |
-|-----|--------|
-| `W` / `↑` | Move paddle up |
-| `S` / `↓` | Move paddle down |
-| `Enter` | Start game / Resume from pause |
-| `ESC` | Pause game / Open pause menu |
-
-**In-menu buttons:**
-
-| Button | Action |
-|--------|--------|
-| `START` | Begin a new game |
-| `AI: EASY / MEDIUM / HARD` | Cycle AI difficulty |
-| `SOUND: ON / OFF` | Toggle beep sound effects |
-| `QUIT` | Close the window |
+Features:
+- AI opponent
+- Multiple difficulty levels
+- Pause system
+- Fullscreen support
+- First to 10 points wins
 
 ---
 
-## ⚙️ Performance
+### Void Serpent
 
-Designed to run on extremely low-spec hardware:
+Terminal-style Snake game.
 
-- Canvas 2D only — no WebGL, no shaders
-- No external libraries or frameworks
-- FPS capped at 60 with early-exit frame skipping
-- Scanlines rendered once to an offscreen canvas
-- Minimal DOM, no heavy redraws
-- Fast startup — loads instantly
-
-Tested on Firefox and Chromium on Linux.
+Features:
+- High score saving
+- Local storage support
+- Animated snake tongue
+- Lightweight grid system
+- Retro monochrome visuals
 
 ---
 
-## 🤖 AI Project
+### BlockFall
 
-This game was **created with Claude**, an AI assistant by [Anthropic](https://www.anthropic.com).  
-The design, code architecture, visual style, game logic, and this README were all produced through a conversation between the developer and Claude.
+Terminal-inspired block puzzle game.
 
-> **Developer:** Manan Pahuja  
-> **AI Assistant:** Claude by Anthropic  
-> **Project Type:** AI-Assisted Game Development
+Features:
+- Falling blocks
+- Line clearing
+- High score system
+- Mobile controls
+- Lightweight rendering
 
----
+## Technology
 
-## 📄 License
+Built using:
 
-MIT License — free to use, modify, and distribute.
+- HTML5
+- CSS3
+- Vanilla JavaScript
 
----
+No external libraries or frameworks are required.
 
-*"It should feel like an old-school minimal utility from a retro Linux machine."*
+## Performance Goals
+
+Terminal Arcade is designed to run on:
+
+- Older Linux laptops
+- Integrated graphics systems
+- Low-RAM computers
+- Lightweight desktop environments
+
+The project prioritizes:
+
+- Simplicity
+- Responsiveness
+- Small file sizes
+- Efficient rendering
+
+## Controls
+
+Most games support:
+
+| Action | Keys |
+|----------|----------|
+| Move | WASD / Arrow Keys |
+| Pause | P |
+| Fullscreen | F |
+| Back | ESC |
+| Start | Enter |
+
+## Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/YOUR_USERNAME/Terminal-Arcade.git
+```
+
+Open:
+
+```txt
+index.html
+```
+
+in your browser.
+
+No build tools required.
+
+## Roadmap
+
+Planned games:
+
+- Minescan (Minesweeper)
+- Void Breaker (Breakout)
+- Void Invasion (Space Invaders)
+- Orbital Drift (Asteroids)
+- Echo Signal (Radar Horror)
+
+## Screenshots
+
+Add screenshots here later.
+
+## Author
+
+Manan
+
+GitHub: https://github.com/YOUR_USERNAME
+
+## License
+
+MIT License
