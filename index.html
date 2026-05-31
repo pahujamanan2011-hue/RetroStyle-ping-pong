@@ -17,11 +17,9 @@
 
     <!-- INTRO -->
     <div id="intro">
-        
         <p>> Runs on very old systems.</p>
         <p>> Mobile compatible.</p>
         <p>> Select a game below to launch.</p>
-
         <p>
             > GitHub:
             <a href="https://github.com/pahujamanan2011-hue" target="_blank" rel="noopener noreferrer">
@@ -38,9 +36,7 @@
             <div class="game-info">
                 <h3>RETRO BALL</h3>
                 <p>Classic terminal pong. Beat the CPU.</p>
-                <p class="hint">
-                    Click to play &bull; F = fullscreen &bull; P = pause
-                </p>
+                <p class="hint">Click to play &bull; F = fullscreen &bull; P = pause</p>
             </div>
         </div>
 
@@ -49,9 +45,16 @@
             <div class="game-info">
                 <h3>VOID SERPENT</h3>
                 <p>Terminal snake survival system.</p>
-                <p class="hint">
-                    Click to play &bull; WASD / Arrows &bull; P = pause
-                </p>
+                <p class="hint">Click to play &bull; WASD / Arrows &bull; P = pause</p>
+            </div>
+        </div>
+
+        <div class="game-card" onclick="launchGame('BlockFall.js')">
+            <img src="BlockFall.png" alt="BlockFall">
+            <div class="game-info">
+                <h3>BLOCKFALL</h3>
+                <p>Classic terminal block puzzle.</p>
+                <p class="hint">Click to play &bull; WASD / Arrows &bull; P = pause &bull; SPACE = hard drop</p>
             </div>
         </div>
 
@@ -71,18 +74,12 @@
 
 <!-- GAME OVERLAY -->
 <div id="overlay" style="display:none;">
-
     <div id="overlay-topbar">
         <button id="back-btn" onclick="goBack()">&#8592; BACK</button>
         <span id="overlay-title">TERMINAL ARCADE</span>
     </div>
-
     <canvas id="pong" width="640" height="360"></canvas>
-
-    <div id="overlay-hint">
-        ESC or F = exit fullscreen &nbsp;|&nbsp; P = pause
-    </div>
-
+    <div id="overlay-hint">ESC or F = fullscreen &nbsp;|&nbsp; P = pause</div>
 </div>
 
 <script>
@@ -91,31 +88,24 @@ var currentScript = null;
 
 function requestLandscape() {
     if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock("landscape")
-        .catch(function () {});
+        screen.orientation.lock("landscape").catch(function () {});
     }
 }
 
 function goBack() {
-
     document.getElementById("overlay").style.display = "none";
-
     if (window.__gameInterval) {
         clearInterval(window.__gameInterval);
         window.__gameInterval = null;
     }
-
     if (currentScript) {
         currentScript.remove();
         currentScript = null;
     }
-
-    document.getElementById("status-msg").textContent =
-        "> No game loaded.";
+    document.getElementById("status-msg").textContent = "> No game loaded.";
 }
 
 function launchGame(file) {
-
     var overlay = document.getElementById("overlay");
     overlay.style.display = "flex";
 
@@ -125,19 +115,16 @@ function launchGame(file) {
         clearInterval(window.__gameInterval);
         window.__gameInterval = null;
     }
-
     if (currentScript) {
         currentScript.remove();
         currentScript = null;
     }
 
     var oldCanvas = document.getElementById("pong");
-
     var newCanvas = document.createElement("canvas");
-    newCanvas.id = "pong";
-    newCanvas.width = 640;
+    newCanvas.id     = "pong";
+    newCanvas.width  = 640;
     newCanvas.height = 360;
-
     oldCanvas.parentNode.replaceChild(newCanvas, oldCanvas);
 
     document.getElementById("overlay-title").textContent =
@@ -145,14 +132,11 @@ function launchGame(file) {
 
     var script = document.createElement("script");
     script.src = file;
-
     currentScript = script;
-
     document.body.appendChild(script);
 
     document.getElementById("status-msg").textContent =
-        "> Running: " + file +
-        "   [F = fullscreen  P = pause  ESC = exit]";
+        "> Running: " + file + "   [F = fullscreen  P = pause  ESC = menu]";
 }
 
 </script>
