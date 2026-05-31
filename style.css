@@ -37,6 +37,8 @@ html, body {
     font-size: 13px;
 }
 #intro p { margin: 3px 0; }
+#intro a  { color: #446644; text-decoration: none; }
+#intro a:hover { color: #66aa66; }
 
 /* GAME GRID */
 #games { padding: 10px; }
