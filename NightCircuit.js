@@ -71,11 +71,11 @@ function sndMove()     { beep(180, 0.03, "square", 0.03); }
    LAYOUT
 --------------------------------------------------------- */
 
-var ROAD_X = 120;          /* road left edge  */
-var ROAD_W = 400;          /* road width      */
+var ROAD_X = 130;          /* road left edge  */
+var ROAD_W = 360;          /* road width      */
 var ROAD_R = ROAD_X + ROAD_W;
-var LANES  = 4;
-var LANE_W = ROAD_W / LANES;  /* 100px each */
+var LANES  = 6;
+var LANE_W = ROAD_W / LANES;  /* 60px each */
 
 /* ---------------------------------------------------------
    SCREENS
@@ -110,8 +110,8 @@ function saveHi() {
    PLAYER
 --------------------------------------------------------- */
 
-var CAR_W  = 28;
-var CAR_H  = 44;
+var CAR_W  = 22;
+var CAR_H  = 40;
 
 var playerX;   /* centre x of player car */
 var playerY;
@@ -138,10 +138,10 @@ for (var ti = 0; ti < MAX_TRAFFIC; ti++) {
 }
 
 var TRAFFIC_TYPES = [
-    { w:24, h:38, col:"#aaa" },  /* small car    */
-    { w:30, h:50, col:"#888" },  /* sedan        */
-    { w:36, h:60, col:"#777" },  /* SUV / truck  */
-    { w:40, h:70, col:"#999" }   /* wide vehicle */
+    { w:18, h:36, col:"#aaa" },  /* small car    */
+    { w:22, h:46, col:"#888" },  /* sedan        */
+    { w:26, h:56, col:"#777" },  /* SUV          */
+    { w:28, h:64, col:"#999" }   /* truck        */
 ];
 
 /* ---------------------------------------------------------
@@ -172,6 +172,21 @@ var SCAN_EVERY   = 1800;  /* ~60s */
 var scanFlash    = 0;
 
 /* ---------------------------------------------------------
+   NITRO POWER-UP
+   Appears every 20 seconds. Lasts 4s on road.
+   Effect: 5s speed boost + ram traffic for points, no crash.
+--------------------------------------------------------- */
+var nitro = { alive: false, x: 0, y: 0 };
+var nitroSpawnClock = 0;
+var NITRO_SPAWN_EVERY = 600;  /* 20 seconds */
+var nitroBlink = 0;
+
+var nitroActive = false;   /* effect running */
+var nitroTicks  = 0;
+var NITRO_EFFECT = 150;    /* 5 seconds */
+var nitroMsgTimer = 0;
+
+/* ---------------------------------------------------------
    INIT
 --------------------------------------------------------- */
 
@@ -196,6 +211,11 @@ function initGame() {
     scanFlash     = 0;
     roadY         = 0;
     newHi         = false;
+    nitro.alive   = false;
+    nitroSpawnClock = 0;
+    nitroActive   = false;
+    nitroTicks    = 0;
+    nitroMsgTimer = 0;
 
     screen = SC_PLAY;
     sndStart();
@@ -286,12 +306,65 @@ function toggleFS() {
    TOUCH CONTROLS
 --------------------------------------------------------- */
 
+/* ---------------------------------------------------------
+   TOUCH CONTROLS – external DOM buttons below canvas
+--------------------------------------------------------- */
+
 var touchLeft  = false;
 var touchRight = false;
 
-/* Button rects (computed once) */
-var TBTN_LEFT  = { x: ROAD_X,            y: H - 48, w: ROAD_W/2 - 4, h: 42 };
-var TBTN_RIGHT = { x: ROAD_X + ROAD_W/2 + 4, y: H - 48, w: ROAD_W/2 - 4, h: 42 };
+var isTouchNC = (typeof window !== "undefined" &&
+    window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+
+if (isTouchNC) {
+    var ncdpad = document.createElement("div");
+    ncdpad.id = "nc-dpad";
+    ncdpad.style.cssText = [
+        "display:flex", "gap:6px", "padding:8px",
+        "background:#000", "justify-content:center",
+        "width:640px", "max-width:100%", "box-sizing:border-box"
+    ].join(";");
+
+    function mkNCBtn(label, id) {
+        var b = document.createElement("button");
+        b.id = id;
+        b.textContent = label;
+        b.style.cssText = [
+            "font-family:monospace", "font-size:20px",
+            "background:#111", "color:#aaa",
+            "border:1px solid #444",
+            "width:50%", "height:64px",
+            "cursor:pointer", "-webkit-tap-highlight-color:transparent",
+            "user-select:none"
+        ].join(";");
+        return b;
+    }
+
+    var ncBtnLeft  = mkNCBtn("< LEFT",  "nc-left");
+    var ncBtnRight = mkNCBtn("RIGHT >", "nc-right");
+    ncdpad.appendChild(ncBtnLeft);
+    ncdpad.appendChild(ncBtnRight);
+    canvas.parentNode.insertBefore(ncdpad, canvas.nextSibling);
+
+    function ncHold(btn, setFlag) {
+        btn.addEventListener("touchstart", function(e) {
+            e.preventDefault();
+            btn.style.background = "#333";
+            setFlag(true);
+        }, { passive: false });
+        btn.addEventListener("touchend", function(e) {
+            e.preventDefault();
+            btn.style.background = "#111";
+            setFlag(false);
+        }, { passive: false });
+        btn.addEventListener("touchcancel", function(e) {
+            setFlag(false);
+        }, { passive: false });
+    }
+
+    ncHold(ncBtnLeft,  function(v) { touchLeft  = v; });
+    ncHold(ncBtnRight, function(v) { touchRight = v; });
+}
 
 function inBtn(tx, ty, b) {
     return tx >= b.x && tx <= b.x+b.w && ty >= b.y && ty <= b.y+b.h;
@@ -303,36 +376,10 @@ canvas.addEventListener("touchstart", function (e) {
         if (typeof requestLandscape === "function") requestLandscape();
         initGame(); return;
     }
-    var rect   = canvas.getBoundingClientRect();
-    var scaleX = W / rect.width;
-    var scaleY = H / rect.height;
-    for (var i = 0; i < e.touches.length; i++) {
-        var tx = (e.touches[i].clientX - rect.left) * scaleX;
-        var ty = (e.touches[i].clientY - rect.top)  * scaleY;
-        if (inBtn(tx, ty, TBTN_LEFT))  touchLeft  = true;
-        if (inBtn(tx, ty, TBTN_RIGHT)) touchRight = true;
-    }
 }, { passive: false });
 
-canvas.addEventListener("touchend", function (e) {
-    e.preventDefault();
-    touchLeft  = false;
-    touchRight = false;
-    /* Re-check remaining touches */
-    var rect   = canvas.getBoundingClientRect();
-    var scaleX = W / rect.width;
-    var scaleY = H / rect.height;
-    for (var i = 0; i < e.touches.length; i++) {
-        var tx = (e.touches[i].clientX - rect.left) * scaleX;
-        var ty = (e.touches[i].clientY - rect.top)  * scaleY;
-        if (inBtn(tx, ty, TBTN_LEFT))  touchLeft  = true;
-        if (inBtn(tx, ty, TBTN_RIGHT)) touchRight = true;
-    }
-}, { passive: false });
-
-canvas.addEventListener("touchcancel", function (e) {
-    touchLeft = touchRight = false;
-}, { passive: false });
+canvas.addEventListener("touchend",   function (e) { e.preventDefault(); }, { passive: false });
+canvas.addEventListener("touchcancel",function (e) { touchLeft = touchRight = false; }, { passive: false });
 
 /* Mouse click for menu/dead */
 canvas.addEventListener("click", function (e) {
@@ -392,6 +439,46 @@ function update() {
         if (speedLevel >= 4 && Math.random() < 0.4) spawnTraffic();
     }
 
+    /* --- NITRO SPAWN --- */
+    nitroSpawnClock++;
+    if (nitroSpawnClock >= NITRO_SPAWN_EVERY && !nitro.alive && !nitroActive) {
+        nitroSpawnClock = 0;
+        var nl = (Math.random() * LANES) | 0;
+        nitro.x = ROAD_X + nl * LANE_W + (LANE_W - 14) / 2;
+        nitro.y = -20;
+        nitro.alive = true;
+        nitroBlink  = 0;
+    }
+
+    /* --- NITRO MOVE + COLLECT --- */
+    if (nitro.alive) {
+        nitro.y += gameSpeed * 1.1;
+        nitroBlink = (nitroBlink + 1) % 20;
+        if (nitro.y > H + 10) { nitro.alive = false; }
+        /* Collect */
+        if (collides(playerX - CAR_W/2, playerY, CAR_W, CAR_H,
+                     nitro.x, nitro.y, 14, 22)) {
+            nitro.alive  = false;
+            nitroActive  = true;
+            nitroTicks   = NITRO_EFFECT;
+            nitroMsgTimer = 60;
+            gameSpeed   += 3;   /* instant speed boost */
+            if (gameSpeed > 14) gameSpeed = 14;
+        }
+    }
+
+    /* --- NITRO EFFECT COUNTDOWN --- */
+    if (nitroActive) {
+        nitroTicks--;
+        if (nitroMsgTimer > 0) nitroMsgTimer--;
+        if (nitroTicks <= 0) {
+            nitroActive = false;
+            /* Restore normal speed */
+            gameSpeed = 2.5 + (speedLevel - 1) * 0.6;
+            if (gameSpeed > 9) gameSpeed = 9;
+        }
+    }
+
     /* --- TRAFFIC MOVE + COLLISION --- */
     var px = playerX - CAR_W/2;
     var py = playerY;
@@ -403,21 +490,28 @@ function update() {
 
         t.y += gameSpeed * 1.1;
 
-        /* Off screen */
         if (t.y > H + 10) { t.alive = false; continue; }
 
         /* Collision */
         if (collides(px, py, CAR_W, CAR_H, t.x, t.y, t.w, t.h)) {
-            crashed = true; break;
+            if (nitroActive) {
+                /* RAM: score points, kill the car, no crash */
+                score += 20;
+                t.alive = false;
+                nearMissTimer = 30;
+                sndNearMiss();
+            } else {
+                crashed = true; break;
+            }
         }
 
-        /* Near miss bonus: within 8px horizontally, just passed */
+        /* Near miss bonus */
         if (!crashed && t.y + t.h >= py - 10 && t.y + t.h <= py + 20) {
             var gap = Math.min(
                 Math.abs(px - (t.x + t.w)),
                 Math.abs(t.x - (px + CAR_W))
             );
-            if (gap < 12 && gap >= 0) {
+            if (gap < 10 && gap >= 0) {
                 score += 5;
                 nearMissTimer = 40;
                 sndNearMiss();
@@ -604,6 +698,28 @@ function draw() {
         if (traffic[i].alive) drawTrafficCar(traffic[i]);
     }
 
+    /* ---- NITRO PICKUP ---- */
+    if (nitro.alive && nitroBlink < 16) {
+        var nx2 = nitro.x | 0;
+        var ny2 = nitro.y | 0;
+        /* Canister body */
+        ctx.fillStyle = "#446644";
+        ctx.fillRect(nx2,     ny2 + 4,  14, 14);
+        /* Top cap */
+        ctx.fillStyle = "#66aa66";
+        ctx.fillRect(nx2 + 3, ny2,       8,  5);
+        /* Nozzle */
+        ctx.fillStyle = "#88cc88";
+        ctx.fillRect(nx2 + 5, ny2 - 3,   4,  4);
+        /* Label stripe */
+        ctx.fillStyle = "#335533";
+        ctx.fillRect(nx2 + 1, ny2 + 9,  12,  3);
+        /* NOS text tiny */
+        ctx.fillStyle = "#aaffaa";
+        ctx.font = "6px monospace";
+        ctx.fillText("NOS", nx2 + 1, ny2 + 20);
+    }
+
     /* ---- PLAYER ---- */
     drawPlayerCar(playerX, playerY);
 
@@ -629,6 +745,23 @@ function draw() {
     ctx.font = "10px monospace";
     ctx.fillText("SPD:" + speedLevel, 8, 78);
 
+    /* Nitro bar */
+    if (nitroActive) {
+        ctx.fillStyle = "#224422";
+        ctx.fillRect(8, 86, 100, 8);
+        ctx.fillStyle = "#44aa44";
+        ctx.fillRect(8, 86, ((nitroTicks / NITRO_EFFECT) * 100) | 0, 8);
+        ctx.fillStyle = "#88ff88";
+        ctx.font = "9px monospace";
+        ctx.fillText("NITRO", 8, 104);
+    }
+
+    /* Nitro activated message */
+    if (nitroMsgTimer > 0) {
+        centered("NITRO BOOST!", H / 2 - 28, 16, "#44cc44");
+        centered("RAM TRAFFIC = +20", H / 2 - 8, 11, "#336633");
+    }
+
     /* Near miss flash */
     if (nearMissTimer > 0) {
         ctx.fillStyle = "#aaaa00";
@@ -646,18 +779,12 @@ function draw() {
         centered("SYSTEM SCAN...", H / 2, 13, "#335533");
     }
 
-    /* Paused */
-    if (paused) {
+    /* Paused overlay – drawn BEFORE restore so it covers road */
+    if (paused && screen === SC_PLAY) {
         ctx.fillStyle = "#000";
         for (var pi = 0; pi < H; pi += 2) ctx.fillRect(0, pi, W, 1);
         centered("PAUSED",     H/2 - 10, 18, "#aaa");
         centered("P = RESUME", H/2 + 16, 11, "#555");
-    }
-
-    /* Mobile touch buttons */
-    if (window.matchMedia("(pointer: coarse)").matches && screen === SC_PLAY && !paused) {
-        fillBtn(TBTN_LEFT.x,  TBTN_LEFT.y,  TBTN_LEFT.w,  TBTN_LEFT.h,  "< LEFT",  touchLeft);
-        fillBtn(TBTN_RIGHT.x, TBTN_RIGHT.y, TBTN_RIGHT.w, TBTN_RIGHT.h, "RIGHT >", touchRight);
     }
 
     ctx.restore();
