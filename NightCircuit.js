@@ -71,11 +71,11 @@ function sndMove()     { beep(180, 0.03, "square", 0.03); }
    LAYOUT
 --------------------------------------------------------- */
 
-var ROAD_X = 130;          /* road left edge  */
-var ROAD_W = 360;          /* road width      */
+var ROAD_X = 110;          /* road left edge  */
+var ROAD_W = 420;          /* road width      */
 var ROAD_R = ROAD_X + ROAD_W;
-var LANES  = 6;
-var LANE_W = ROAD_W / LANES;  /* 60px each */
+var LANES  = 4;
+var LANE_W = ROAD_W / LANES;  /* 105px each */
 
 /* ---------------------------------------------------------
    SCREENS
@@ -110,8 +110,8 @@ function saveHi() {
    PLAYER
 --------------------------------------------------------- */
 
-var CAR_W  = 32;
-var CAR_H  = 44;
+var CAR_W  = 38;
+var CAR_H  = 52;
 
 var playerX;   /* centre x of player car */
 var playerY;
@@ -138,10 +138,10 @@ for (var ti = 0; ti < MAX_TRAFFIC; ti++) {
 }
 
 var TRAFFIC_TYPES = [
-    { w:28, h:38, col:"#aaa" },  /* small car    */
-    { w:34, h:50, col:"#888" },  /* sedan        */
-    { w:38, h:58, col:"#777" },  /* SUV          */
-    { w:42, h:66, col:"#999" }   /* truck        */
+    { w:34, h:44, col:"#aaa" },  /* small car    */
+    { w:40, h:56, col:"#888" },  /* sedan        */
+    { w:46, h:64, col:"#777" },  /* SUV          */
+    { w:52, h:72, col:"#999" }   /* truck        */
 ];
 
 /* ---------------------------------------------------------
@@ -181,10 +181,44 @@ var nitroSpawnClock = 0;
 var NITRO_SPAWN_EVERY = 600;  /* 20 seconds */
 var nitroBlink = 0;
 
-var nitroActive = false;   /* effect running */
+var nitroActive = false;
 var nitroTicks  = 0;
 var NITRO_EFFECT = 300;    /* 10 seconds at 30fps */
 var nitroMsgTimer = 0;
+var baseSpeed   = 2.5;     /* speed without any boost — updated on level-up only */
+
+/* ---------------------------------------------------------
+   COIN PICKUP  – every 8s, +20 score, no effect
+--------------------------------------------------------- */
+var coin = { alive: false, x: 0, y: 0 };
+var coinSpawnClock = 0;
+var COIN_SPAWN_EVERY = 240;  /* 8 seconds */
+var coinBlink = 0;
+var coinMsgTimer = 0;
+
+/* ---------------------------------------------------------
+   TURBO POWER-UP  – every 40s, 5s effect
+   Faster than nitro + full invincibility + player blinks
+--------------------------------------------------------- */
+var turbo = { alive: false, x: 0, y: 0 };
+var turboSpawnClock = 0;
+var TURBO_SPAWN_EVERY = 1200;  /* 40 seconds */
+var turboBlink = 0;
+
+var turboActive = false;
+var turboTicks  = 0;
+var TURBO_EFFECT = 150;   /* 5 seconds */
+var turboMsgTimer = 0;
+var turboBlinkState = 0;  /* for player blink animation */
+
+/* ---------------------------------------------------------
+   IDLE LANE PUNISHMENT
+   If player stays in same lane for 4s, a car spawns there
+--------------------------------------------------------- */
+var lastPlayerLane = -1;
+var idleTicks      = 0;
+var IDLE_LIMIT     = 120;  /* 4 seconds at 30fps */
+var idleWarning    = 0;    /* countdown to show warning */
 
 /* ---------------------------------------------------------
    INIT
@@ -216,6 +250,21 @@ function initGame() {
     nitroActive   = false;
     nitroTicks    = 0;
     nitroMsgTimer = 0;
+    baseSpeed     = 2.5;
+    coin.alive    = false;
+    coinSpawnClock = 0;
+    coinBlink     = 0;
+    coinMsgTimer  = 0;
+    turbo.alive   = false;
+    turboSpawnClock = 0;
+    turboBlink    = 0;
+    turboActive   = false;
+    turboTicks    = 0;
+    turboMsgTimer = 0;
+    turboBlinkState = 0;
+    lastPlayerLane = -1;
+    idleTicks     = 0;
+    idleWarning   = 0;
 
     screen = SC_PLAY;
     sndStart();
@@ -225,14 +274,24 @@ function initGame() {
    SPAWN TRAFFIC
 --------------------------------------------------------- */
 
-function spawnTraffic() {
-    /* Find dead slot */
+function countActiveTraffic() {
+    var n = 0;
+    for (var i = 0; i < MAX_TRAFFIC; i++) {
+        if (traffic[i].alive && traffic[i].y < H * 0.5) n++;
+    }
+    return n;
+}
+
+function spawnTraffic(forceLane) {
+    /* Spawn cap: never more than 3 cars in top half of screen */
+    if (countActiveTraffic() >= 3) return;
+
     for (var i = 0; i < MAX_TRAFFIC; i++) {
         if (!traffic[i].alive) {
             var t   = traffic[i];
             var tp  = TRAFFIC_TYPES[(Math.random() * TRAFFIC_TYPES.length) | 0];
-            /* Pick random lane centre */
-            var lane = (Math.random() * LANES) | 0;
+            var lane = (forceLane !== undefined) ? forceLane :
+                       ((Math.random() * LANES) | 0);
             t.x     = ROAD_X + lane * LANE_W + (LANE_W - tp.w) / 2;
             t.y     = -tp.h - 10;
             t.w     = tp.w;
@@ -307,8 +366,29 @@ function toggleFS() {
 --------------------------------------------------------- */
 
 /* ---------------------------------------------------------
-   TOUCH CONTROLS – external DOM buttons below canvas
+   INJECT PAUSE BUTTON into overlay topbar
 --------------------------------------------------------- */
+(function() {
+    var topbar = document.getElementById("overlay-topbar");
+    if (!topbar) return;
+    if (document.getElementById("nc-pause-btn")) return;
+    var pb = document.createElement("button");
+    pb.id = "nc-pause-btn";
+    pb.textContent = "II PAUSE";
+    pb.style.cssText = [
+        "font-family:monospace", "font-size:12px",
+        "background:#111", "color:#aaa",
+        "border:1px solid #333", "padding:4px 10px",
+        "cursor:pointer", "margin-left:8px"
+    ].join(";");
+    pb.addEventListener("click", function() {
+        if (screen !== SC_PLAY) return;
+        paused = !paused;
+        pb.textContent = paused ? "> RESUME" : "II PAUSE";
+        sndPause();
+    });
+    topbar.appendChild(pb);
+})();
 
 var touchLeft  = false;
 var touchRight = false;
@@ -423,11 +503,13 @@ function update() {
     var newLevel = ((distance / 400) | 0) + 1;
     if (newLevel > speedLevel) {
         speedLevel    = newLevel;
-        gameSpeed     = 2.5 + (speedLevel - 1) * 0.6;
-        if (gameSpeed > 9) gameSpeed = 9;
+        baseSpeed     = 2.5 + (speedLevel - 1) * 0.6;
+        if (baseSpeed > 9) baseSpeed = 9;
         spawnInterval = 60 - speedLevel * 4;
         if (spawnInterval < 18) spawnInterval = 18;
         speedMsgTimer = 90;
+        /* Only update gameSpeed if no boost active */
+        if (!nitroActive && !turboActive) gameSpeed = baseSpeed;
     }
 
     /* --- SPAWN --- */
@@ -473,11 +555,88 @@ function update() {
         if (nitroMsgTimer > 0) nitroMsgTimer--;
         if (nitroTicks <= 0) {
             nitroActive = false;
-            /* Restore normal speed */
-            gameSpeed = 2.5 + (speedLevel - 1) * 0.6;
-            if (gameSpeed > 9) gameSpeed = 9;
+            if (!turboActive) gameSpeed = baseSpeed;
         }
     }
+
+    /* --- COIN SPAWN + MOVE + COLLECT --- */
+    coinSpawnClock++;
+    if (coinSpawnClock >= COIN_SPAWN_EVERY && !coin.alive) {
+        coinSpawnClock = 0;
+        var cl = (Math.random() * LANES) | 0;
+        coin.x = ROAD_X + cl * LANE_W + (LANE_W - 12) / 2;
+        coin.y = -16;
+        coin.alive = true;
+        coinBlink  = 0;
+    }
+    if (coin.alive) {
+        coin.y += gameSpeed * 1.1;
+        coinBlink = (coinBlink + 1) % 16;
+        if (coin.y > H + 10) { coin.alive = false; }
+        if (collides(playerX - CAR_W/2, playerY, CAR_W, CAR_H,
+                     coin.x, coin.y, 12, 12)) {
+            coin.alive = false;
+            score += 20;
+            coinMsgTimer = 40;
+            if (score > hiScore) { hiScore = score; saveHi(); }
+        }
+    }
+    if (coinMsgTimer > 0) coinMsgTimer--;
+
+    /* --- TURBO SPAWN + MOVE + COLLECT --- */
+    turboSpawnClock++;
+    if (turboSpawnClock >= TURBO_SPAWN_EVERY && !turbo.alive && !turboActive) {
+        turboSpawnClock = 0;
+        var tl2 = (Math.random() * LANES) | 0;
+        turbo.x = ROAD_X + tl2 * LANE_W + (LANE_W - 16) / 2;
+        turbo.y = -24;
+        turbo.alive = true;
+        turboBlink  = 0;
+    }
+    if (turbo.alive) {
+        turbo.y += gameSpeed * 1.1;
+        turboBlink = (turboBlink + 1) % 20;
+        if (turbo.y > H + 10) { turbo.alive = false; }
+        if (collides(playerX - CAR_W/2, playerY, CAR_W, CAR_H,
+                     turbo.x, turbo.y, 16, 24)) {
+            turbo.alive   = false;
+            turboActive   = true;
+            turboTicks    = TURBO_EFFECT;
+            turboMsgTimer = 60;
+            gameSpeed     = baseSpeed + 6;
+            if (gameSpeed > 18) gameSpeed = 18;
+        }
+    }
+
+    /* --- TURBO EFFECT COUNTDOWN --- */
+    if (turboActive) {
+        turboTicks--;
+        turboBlinkState = (turboBlinkState + 1) % 8;
+        if (turboMsgTimer > 0) turboMsgTimer--;
+        if (turboTicks <= 0) {
+            turboActive = false;
+            turboBlinkState = 0;
+            if (!nitroActive) gameSpeed = baseSpeed;
+        }
+    }
+
+    /* --- IDLE LANE PUNISHMENT --- */
+    var curLane = ((playerX - ROAD_X) / LANE_W) | 0;
+    if (curLane < 0) curLane = 0;
+    if (curLane >= LANES) curLane = LANES - 1;
+    if (curLane === lastPlayerLane) {
+        idleTicks++;
+        if (idleTicks === IDLE_LIMIT - 30) idleWarning = 30; /* warn 1s before */
+        if (idleTicks >= IDLE_LIMIT) {
+            idleTicks = 0;
+            spawnTraffic(curLane);  /* force car into idle lane */
+        }
+    } else {
+        lastPlayerLane = curLane;
+        idleTicks      = 0;
+        idleWarning    = 0;
+    }
+    if (idleWarning > 0) idleWarning--;
 
     /* --- TRAFFIC MOVE + COLLISION --- */
     var px = playerX - CAR_W/2;
@@ -494,9 +653,9 @@ function update() {
 
         /* Collision */
         if (collides(px, py, CAR_W, CAR_H, t.x, t.y, t.w, t.h)) {
-            if (nitroActive) {
+            if (nitroActive || turboActive) {
                 /* RAM: score points, kill the car, no crash */
-                score += 20;
+                score += turboActive ? 30 : 20;
                 t.alive = false;
                 nearMissTimer = 30;
                 sndNearMiss();
@@ -567,33 +726,61 @@ function fillBtn(x, y, w, h, label, active) {
     ctx.fillText(label, x + ((w - tw) >> 1), y + h - 7);
 }
 
-/* Draw player car (simple white pixel art) */
+/* Draw player car – improved pixel art */
 function drawPlayerCar(cx, cy) {
+    /* Skip draw every other frame when turbo blinking */
+    if (turboActive && turboBlinkState >= 4) return;
+
     var x = (cx - CAR_W/2) | 0;
     var y = cy | 0;
+    var col = turboActive ? "#88ffff" : (nitroActive ? "#aaffaa" : "#eee");
 
-    /* Body */
-    ctx.fillStyle = "#eee";
-    ctx.fillRect(x + 4,  y,           CAR_W - 8, CAR_H);
-    ctx.fillRect(x,      y + 10,      CAR_W,     CAR_H - 28);
+    /* Main body – centre column */
+    ctx.fillStyle = col;
+    ctx.fillRect(x + 6,  y + 2,   CAR_W - 12, CAR_H - 2);
+    /* Wide middle section */
+    ctx.fillRect(x + 2,  y + 14,  CAR_W - 4,  CAR_H - 32);
+    /* Roof */
+    ctx.fillRect(x + 8,  y + 2,   CAR_W - 16, 14);
 
-    /* Windscreen dark */
-    ctx.fillStyle = "#333";
-    ctx.fillRect(x + 6,  y + 6,       CAR_W - 12, 12);
+    /* Windscreen */
+    ctx.fillStyle = turboActive ? "#003344" : "#222";
+    ctx.fillRect(x + 9,  y + 4,   CAR_W - 18, 10);
+
+    /* Side windows */
+    ctx.fillStyle = turboActive ? "#004455" : "#2a2a2a";
+    ctx.fillRect(x + 4,  y + 18,  6,  10);
+    ctx.fillRect(x + CAR_W - 10, y + 18, 6, 10);
 
     /* Rear window */
-    ctx.fillStyle = "#444";
-    ctx.fillRect(x + 6,  y + CAR_H - 16, CAR_W - 12, 8);
+    ctx.fillStyle = turboActive ? "#003344" : "#333";
+    ctx.fillRect(x + 9,  y + CAR_H - 16, CAR_W - 18, 8);
 
-    /* Headlights */
+    /* Hood detail lines */
+    ctx.fillStyle = "#555";
+    ctx.fillRect(x + 10, y + CAR_H - 24, 4, 6);
+    ctx.fillRect(x + CAR_W - 14, y + CAR_H - 24, 4, 6);
+
+    /* Headlights – top (we face down, so top = front going away) */
     ctx.fillStyle = "#fff";
-    ctx.fillRect(x + 4,  y + 2,  6, 4);
-    ctx.fillRect(x + CAR_W - 10, y + 2, 6, 4);
+    ctx.fillRect(x + 4,  y + 2,   8, 5);
+    ctx.fillRect(x + CAR_W - 12, y + 2, 8, 5);
 
-    /* Taillights */
-    ctx.fillStyle = "#882222";
-    ctx.fillRect(x + 4,  y + CAR_H - 6, 6, 4);
-    ctx.fillRect(x + CAR_W - 10, y + CAR_H - 6, 6, 4);
+    /* Taillights – bottom = facing player */
+    ctx.fillStyle = turboActive ? "#ff4444" : "#cc2222";
+    ctx.fillRect(x + 4,  y + CAR_H - 7, 8, 5);
+    ctx.fillRect(x + CAR_W - 12, y + CAR_H - 7, 8, 5);
+
+    /* Exhaust glow under turbo */
+    if (turboActive) {
+        ctx.fillStyle = turboBlinkState < 2 ? "#00cccc" : "#006666";
+        ctx.fillRect(x + 12, y + CAR_H, 5, 4);
+        ctx.fillRect(x + CAR_W - 17, y + CAR_H, 5, 4);
+    } else if (nitroActive) {
+        ctx.fillStyle = "#22aa22";
+        ctx.fillRect(x + 12, y + CAR_H, 4, 3);
+        ctx.fillRect(x + CAR_W - 16, y + CAR_H, 4, 3);
+    }
 }
 
 /* Draw a traffic car */
@@ -702,26 +889,64 @@ function draw() {
     if (nitro.alive && nitroBlink < 16) {
         var nx2 = nitro.x | 0;
         var ny2 = nitro.y | 0;
-        /* Canister body */
         ctx.fillStyle = "#446644";
         ctx.fillRect(nx2,     ny2 + 4,  14, 14);
-        /* Top cap */
         ctx.fillStyle = "#66aa66";
         ctx.fillRect(nx2 + 3, ny2,       8,  5);
-        /* Nozzle */
         ctx.fillStyle = "#88cc88";
         ctx.fillRect(nx2 + 5, ny2 - 3,   4,  4);
-        /* Label stripe */
         ctx.fillStyle = "#335533";
         ctx.fillRect(nx2 + 1, ny2 + 9,  12,  3);
-        /* NOS text tiny */
         ctx.fillStyle = "#aaffaa";
         ctx.font = "6px monospace";
         ctx.fillText("NOS", nx2 + 1, ny2 + 20);
     }
 
+    /* ---- COIN PICKUP ---- */
+    if (coin.alive && coinBlink < 13) {
+        var cnx = coin.x | 0;
+        var cny = coin.y | 0;
+        /* Coin: yellow circle-ish using rects */
+        ctx.fillStyle = "#aaaa00";
+        ctx.fillRect(cnx + 2, cny,      8,  12);
+        ctx.fillRect(cnx,     cny + 2,  12, 8);
+        ctx.fillStyle = "#888800";
+        ctx.fillRect(cnx + 3, cny + 2,  6,  8);
+        ctx.fillStyle = "#dddd00";
+        ctx.fillRect(cnx + 4, cny + 1,  4,  2);
+        ctx.font = "6px monospace";
+        ctx.fillStyle = "#ffff44";
+        ctx.fillText("$", cnx + 4, cny + 9);
+    }
+
+    /* ---- TURBO PICKUP ---- */
+    if (turbo.alive && turboBlink < 16) {
+        var tbx = turbo.x | 0;
+        var tby = turbo.y | 0;
+        /* Turbo: cyan lightning bolt shape */
+        ctx.fillStyle = "#006688";
+        ctx.fillRect(tbx,      tby + 6,  16, 12);
+        ctx.fillStyle = "#00aacc";
+        ctx.fillRect(tbx + 2,  tby,       8,  8);
+        ctx.fillRect(tbx + 6,  tby + 8,   8,  8);
+        ctx.fillStyle = "#00eeff";
+        ctx.fillRect(tbx + 4,  tby + 3,   4,  4);
+        ctx.fillRect(tbx + 8,  tby + 11,  4,  4);
+        ctx.font = "6px monospace";
+        ctx.fillStyle = "#88ffff";
+        ctx.fillText("T", tbx + 6, tby + 22);
+    }
+
     /* ---- PLAYER ---- */
     drawPlayerCar(playerX, playerY);
+
+    /* Idle lane warning */
+    if (idleWarning > 0) {
+        ctx.fillStyle = "#aa4400";
+        ctx.font = "10px monospace";
+        var wt = ctx.measureText("MOVE!").width;
+        ctx.fillText("MOVE!", (playerX | 0) - (wt >> 1), playerY - 8);
+    }
 
     /* ---- HUD ---- */
     ctx.fillStyle = "#000";
@@ -756,10 +981,36 @@ function draw() {
         ctx.fillText("NITRO", 8, 104);
     }
 
+    /* Turbo bar */
+    if (turboActive) {
+        ctx.fillStyle = "#003344";
+        ctx.fillRect(8, 86, 100, 8);
+        ctx.fillStyle = "#00aacc";
+        ctx.fillRect(8, 86, ((turboTicks / TURBO_EFFECT) * 100) | 0, 8);
+        ctx.fillStyle = "#00eeff";
+        ctx.font = "9px monospace";
+        ctx.fillText("TURBO", 8, 104);
+    }
+
     /* Nitro activated message */
     if (nitroMsgTimer > 0) {
         centered("NITRO BOOST!", H / 2 - 28, 16, "#44cc44");
         centered("RAM TRAFFIC = +20", H / 2 - 8, 11, "#336633");
+    }
+
+    /* Turbo activated message */
+    if (turboMsgTimer > 0) {
+        centered("TURBO!", H / 2 - 28, 20, "#00eeff");
+        centered("INVINCIBLE + RAM = +30", H / 2 - 4, 11, "#005566");
+    }
+
+    /* Coin collect message */
+    if (coinMsgTimer > 0) {
+        ctx.fillStyle = "#dddd00";
+        ctx.font = "12px monospace";
+        var ct = "+20";
+        var ctw = ctx.measureText(ct).width;
+        ctx.fillText(ct, (playerX | 0) - (ctw >> 1), playerY - 10);
     }
 
     /* Near miss flash */
