@@ -110,8 +110,8 @@ function saveHi() {
    PLAYER
 --------------------------------------------------------- */
 
-var CAR_W  = 22;
-var CAR_H  = 40;
+var CAR_W  = 32;
+var CAR_H  = 44;
 
 var playerX;   /* centre x of player car */
 var playerY;
@@ -138,10 +138,10 @@ for (var ti = 0; ti < MAX_TRAFFIC; ti++) {
 }
 
 var TRAFFIC_TYPES = [
-    { w:18, h:36, col:"#aaa" },  /* small car    */
-    { w:22, h:46, col:"#888" },  /* sedan        */
-    { w:26, h:56, col:"#777" },  /* SUV          */
-    { w:28, h:64, col:"#999" }   /* truck        */
+    { w:28, h:38, col:"#aaa" },  /* small car    */
+    { w:34, h:50, col:"#888" },  /* sedan        */
+    { w:38, h:58, col:"#777" },  /* SUV          */
+    { w:42, h:66, col:"#999" }   /* truck        */
 ];
 
 /* ---------------------------------------------------------
@@ -183,7 +183,7 @@ var nitroBlink = 0;
 
 var nitroActive = false;   /* effect running */
 var nitroTicks  = 0;
-var NITRO_EFFECT = 150;    /* 5 seconds */
+var NITRO_EFFECT = 300;    /* 10 seconds at 30fps */
 var nitroMsgTimer = 0;
 
 /* ---------------------------------------------------------
