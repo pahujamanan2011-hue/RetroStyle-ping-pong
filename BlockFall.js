@@ -316,67 +316,99 @@ function toggleFS() {
 }
 
 /* ---------------------------------------------------------
-   TOUCH CONTROLS
-   D-pad buttons drawn on canvas; tap detection in touchend
+   TOUCH CONTROLS – external DOM buttons below canvas
+   Injected only on touch devices, sized for fingers
 --------------------------------------------------------- */
 
-var BTN = {
-    left:   { x: 10,  y: H - 54, w: 60, h: 40 },
-    right:  { x: 80,  y: H - 54, w: 60, h: 40 },
-    rotate: { x: 150, y: H - 54, w: 80, h: 40 },
-    down:   { x: 10,  y: H - 10, w: 220, h: 36 }  /* unused – tap anywhere below */
-};
+var isTouchDevice = (typeof window !== "undefined" &&
+    window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
 
-/* Recompute BTN to sit below the board on canvas */
-BTN.left   = { x: BOARD_X,                y: BOARD_Y + BOARD_H + 8, w: 44, h: 36 };
-BTN.right  = { x: BOARD_X + 50,           y: BOARD_Y + BOARD_H + 8, w: 44, h: 36 };
-BTN.rotate = { x: BOARD_X + 100,          y: BOARD_Y + BOARD_H + 8, w: 60, h: 36 };
-BTN.down   = { x: BOARD_X,                y: BOARD_Y + BOARD_H + 50, w: 160, h: 32 };
+/* Inject D-pad div below canvas on touch devices */
+if (isTouchDevice) {
+    var dpad = document.createElement("div");
+    dpad.id = "bf-dpad";
+    dpad.style.cssText = [
+        "display:flex", "flex-direction:column", "align-items:center",
+        "gap:6px", "padding:8px 0", "background:#000",
+        "width:640px", "max-width:100%", "box-sizing:border-box"
+    ].join(";");
 
-var isTouchDevice = false;
+    var rowTop = document.createElement("div");
+    rowTop.style.cssText = "display:flex;gap:6px;";
+    var rowBot = document.createElement("div");
+    rowBot.style.cssText = "display:flex;gap:6px;";
+
+    function mkBtn(label, id) {
+        var b = document.createElement("button");
+        b.id = id;
+        b.textContent = label;
+        b.style.cssText = [
+            "font-family:monospace", "font-size:18px",
+            "background:#111", "color:#aaa",
+            "border:1px solid #444", "padding:0",
+            "width:100px", "height:56px",
+            "cursor:pointer", "-webkit-tap-highlight-color:transparent",
+            "user-select:none"
+        ].join(";");
+        return b;
+    }
+
+    var btnLeft   = mkBtn("<",      "bf-left");
+    var btnRight  = mkBtn(">",      "bf-right");
+    var btnRotate = mkBtn("ROTATE", "bf-rotate");
+    var btnDrop   = mkBtn("v DROP", "bf-drop");
+    btnDrop.style.width  = "206px";  /* span full row */
+    btnRotate.style.width = "100px";
+
+    rowTop.appendChild(btnLeft);
+    rowTop.appendChild(btnRotate);
+    rowTop.appendChild(btnRight);
+    rowBot.appendChild(btnDrop);
+    dpad.appendChild(rowTop);
+    dpad.appendChild(rowBot);
+
+    /* Insert after canvas */
+    canvas.parentNode.insertBefore(dpad, canvas.nextSibling);
+
+    /* Touch handlers on buttons */
+    function addTouchBtn(btn, action) {
+        btn.addEventListener("touchstart", function(e) {
+            e.preventDefault();
+            btn.style.background = "#333";
+            action();
+        }, { passive: false });
+        btn.addEventListener("touchend", function(e) {
+            e.preventDefault();
+            btn.style.background = "#111";
+        }, { passive: false });
+    }
+
+    addTouchBtn(btnLeft, function() {
+        if (screen !== SC_PLAY || paused || flashTick > 0) return;
+        if (valid(piece, -1, 0, 0)) { piece.x--; vibrate(8); }
+    });
+    addTouchBtn(btnRight, function() {
+        if (screen !== SC_PLAY || paused || flashTick > 0) return;
+        if (valid(piece, 1, 0, 0)) { piece.x++; vibrate(8); }
+    });
+    addTouchBtn(btnRotate, function() {
+        if (screen !== SC_PLAY || paused || flashTick > 0) return;
+        if      (valid(piece, 0,  0, 1)) { piece.rot=(piece.rot+1)%4; vibrate(8); }
+        else if (valid(piece, 1,  0, 1)) { piece.x++; piece.rot=(piece.rot+1)%4; vibrate(8); }
+        else if (valid(piece, -1, 0, 1)) { piece.x--; piece.rot=(piece.rot+1)%4; vibrate(8); }
+    });
+    addTouchBtn(btnDrop, function() {
+        if (screen !== SC_PLAY || paused || flashTick > 0) return;
+        if (valid(piece, 0, 1, 0)) { piece.y++; score++; dropTick = 0; }
+        else { lockPiece(); vibrate(15); }
+    });
+}
 
 canvas.addEventListener("touchstart", function (e) {
     e.preventDefault();
-    isTouchDevice = true;
-}, { passive: false });
-
-canvas.addEventListener("touchend", function (e) {
-    e.preventDefault();
-    var rect = canvas.getBoundingClientRect();
-    var scaleX = W / rect.width;
-    var scaleY = H / rect.height;
-
-    for (var t = 0; t < e.changedTouches.length; t++) {
-        var tx = (e.changedTouches[t].clientX - rect.left) * scaleX;
-        var ty = (e.changedTouches[t].clientY - rect.top)  * scaleY;
-
-        /* Menu / dead: tap anywhere to start */
-        if (screen === SC_MENU || screen === SC_DEAD) {
-            if (typeof requestLandscape === "function") requestLandscape();
-            initGame(); return;
-        }
-
-        if (screen !== SC_PLAY || paused || flashTick > 0) continue;
-
-        /* LEFT */
-        if (hit(tx, ty, BTN.left)) {
-            if (valid(piece, -1, 0, 0)) { piece.x--; vibrate(8); }
-        }
-        /* RIGHT */
-        else if (hit(tx, ty, BTN.right)) {
-            if (valid(piece, 1, 0, 0)) { piece.x++; vibrate(8); }
-        }
-        /* ROTATE */
-        else if (hit(tx, ty, BTN.rotate)) {
-            if      (valid(piece, 0,  0, 1)) { piece.rot = (piece.rot+1)%4; vibrate(8); }
-            else if (valid(piece, 1,  0, 1)) { piece.x++; piece.rot = (piece.rot+1)%4; vibrate(8); }
-            else if (valid(piece, -1, 0, 1)) { piece.x--; piece.rot = (piece.rot+1)%4; vibrate(8); }
-        }
-        /* DOWN */
-        else if (hit(tx, ty, BTN.down)) {
-            if (valid(piece, 0, 1, 0)) { piece.y++; score++; dropTick = 0; }
-            else { lockPiece(); vibrate(15); }
-        }
+    if (screen === SC_MENU || screen === SC_DEAD) {
+        if (typeof requestLandscape === "function") requestLandscape();
+        initGame();
     }
 }, { passive: false });
 
@@ -600,14 +632,6 @@ function draw() {
     fillBtn(PANEL_X, BOARD_Y + 250, 55, 22, "P:PAUSE", paused);
     fillBtn(PANEL_X + 62, BOARD_Y + 250, 55, 22, "F:FULL", false);
     fillBtn(PANEL_X, BOARD_Y + 278, 117, 22, "ESC:MENU", false);
-
-    /* ---- MOBILE D-PAD ---- */
-    if (window.matchMedia("(pointer: coarse)").matches && screen === SC_PLAY) {
-        fillBtn(BTN.left.x,   BTN.left.y,   BTN.left.w,   BTN.left.h,   "<",      false);
-        fillBtn(BTN.right.x,  BTN.right.y,  BTN.right.w,  BTN.right.h,  ">",      false);
-        fillBtn(BTN.rotate.x, BTN.rotate.y, BTN.rotate.w, BTN.rotate.h, "ROTATE", false);
-        fillBtn(BTN.down.x,   BTN.down.y,   BTN.down.w,   BTN.down.h,   "v DROP", false);
-    }
 
     /* ---- PAUSED OVERLAY ---- */
     if (paused && screen === SC_PLAY) {
